@@ -224,5 +224,27 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     @controller_instance.objsession.bar.should == 345
   end
 
+  it "should allow setting a storage name for a field, and should use that when talking to the underlying session" do
+    define_objsession_class do
+      unknown_fields :delete
+
+      field :foo, :storage => :f
+      field :bar, :storage => :b
+    end
+
+    allow(@underlying_session).to receive(:keys).and_return([ :foo, :b ])
+    expect(@underlying_session).to receive(:delete).once.with([ :foo ])
+
+
+    expect(@underlying_session).to receive(:[]=).once.with(:f, 123)
+    @controller_instance.objsession.foo = 123
+
+    expect(@underlying_session).to receive(:[]).once.with(:f).and_return(234)
+    @controller_instance.objsession.foo.should == 234
+
+    allow(@underlying_session).to receive(:[]).once.with(:b).and_return(456)
+    @controller_instance.objsession.bar.should == 456
+  end
+
   it "should call the included module something sane"
 end

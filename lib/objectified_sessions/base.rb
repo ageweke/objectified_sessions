@@ -32,22 +32,22 @@ module ObjectifiedSessions
         underlying = _objectified_sessions_underlying_session(false)
 
         if underlying
-          unknown = underlying.keys.select { |k| ! self.class._field_named(k) }
+          unknown = underlying.keys.select { |k| ! self.class._field_with_storage_name(k) }
           underlying.delete(unknown) if unknown.length > 0
         end
       end
     end
 
     def [](field_name)
-      self.class._ensure_has_field_named(field_name)
+      field = self.class._ensure_has_field_named(field_name)
 
       underlying = _objectified_sessions_underlying_session(false)
-      underlying[field_name] if underlying
+      underlying[field.storage_name] if underlying
     end
 
     def []=(field_name, new_value)
-      self.class._ensure_has_field_named(field_name)
-      _objectified_sessions_underlying_session(true)[field_name] = new_value
+      field = self.class._ensure_has_field_named(field_name)
+      _objectified_sessions_underlying_session(true)[field.storage_name] = new_value
     end
 
     DYNAMIC_METHODS_MODULE_NAME = :ObjectifiedSessionsDynamicMethods
@@ -55,9 +55,11 @@ module ObjectifiedSessions
     class << self
       def field(name, options = { })
         @fields ||= { }
+        @fields_by_storage_name ||= { }
 
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
         @fields[new_field.name] = new_field
+        @fields_by_storage_name[new_field.storage_name] = new_field
       end
 
       def prefix(new_prefix = nil)
@@ -85,6 +87,11 @@ module ObjectifiedSessions
       def _field_named(name)
         name = ObjectifiedSessions::FieldDefinition.normalize_name(name)
         @fields[name]
+      end
+
+      def _field_with_storage_name(storage_name)
+        storage_name = ObjectifiedSessions::FieldDefinition.normalize_name(storage_name)
+        @fields_by_storage_name[storage_name]
       end
 
       def _ensure_has_field_named(name)

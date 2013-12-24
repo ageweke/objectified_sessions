@@ -17,11 +17,23 @@ module ObjectifiedSessions
       @name = self.class.normalize_name(name)
       @options = options
 
+      validate_options!
+
       create_methods!
+    end
+
+    def storage_name
+      @storage_name || name
     end
 
     private
     attr_reader :options
+
+    def validate_options!
+      if options[:storage]
+        @storage_name = self.class.normalize_name(options[:storage])
+      end
+    end
 
     def create_methods!
       fn = name
