@@ -32,7 +32,10 @@ module ObjectifiedSessions
         underlying = _objectified_sessions_underlying_session(false)
 
         if underlying
-          unknown = underlying.keys.select { |k| ! self.class._field_with_storage_name(k) }
+          unknown = underlying.keys.select do |k|
+            field = self.class._field_with_storage_name(k)
+            (! field) || field.retired?
+          end
           underlying.delete(unknown) if unknown.length > 0
         end
       end
@@ -69,6 +72,10 @@ module ObjectifiedSessions
 
         @fields[new_field.name] = new_field
         @fields_by_storage_name[new_field.storage_name] = new_field
+      end
+
+      def retired(name, options = { })
+        field(name, options.merge(:retired => true))
       end
 
       def prefix(new_prefix = nil)

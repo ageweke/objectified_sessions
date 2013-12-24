@@ -26,6 +26,10 @@ module ObjectifiedSessions
       @storage_name || name
     end
 
+    def retired?
+      options[:retired]
+    end
+
     private
     attr_reader :options
 

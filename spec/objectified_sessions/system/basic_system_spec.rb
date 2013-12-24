@@ -310,4 +310,61 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     e.message.should match(/foo/i)
     e.message.should match(/bar/i)
   end
+
+  describe "retired fields" do
+    it "should prevent you from defining a field with the same storage name" do
+      e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+        define_objsession_class do
+          field :foo
+
+          retired :foo
+        end
+      end
+
+      e.session_class.should be(@objsession_class)
+      e.field_name.should == :foo
+      e.message.should match(/foo/i)
+
+      e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+        define_objsession_class do
+          retired :foo
+          field :foo
+        end
+      end
+
+      e.session_class.should be(@objsession_class)
+      e.field_name.should == :foo
+      e.message.should match(/foo/i)
+
+      e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+        define_objsession_class do
+          retired :foo
+          field :bar, :storage => :foo
+        end
+      end
+
+      e.session_class.should be(@objsession_class)
+      e.original_field_name.should == :foo
+      e.new_field_name.should == :bar
+      e.storage_name.should == :foo
+      e.message.should match(/foo/i)
+      e.message.should match(/bar/i)
+    end
+
+    it "should still delete such a field's data if the field is retired" do
+      define_objsession_class do
+        unknown_fields :delete
+
+        field :foo
+        retired :bar
+      end
+
+      allow(@underlying_session).to receive(:keys).with().and_return([ :foo, :bar ])
+      expect(@underlying_session).to receive(:delete).once.with([ :bar ])
+
+      allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+
+      @controller_instance.objsession.foo.should == 234
+    end
+  end
 end
