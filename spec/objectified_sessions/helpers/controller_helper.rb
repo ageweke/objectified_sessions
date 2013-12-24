@@ -13,6 +13,13 @@ module ObjectifiedSessions
         instance
       end
 
+      def define_objsession_class(&block)
+        @objsession_class = Class.new(::ObjectifiedSessions::Base)
+        @objsession_class.class_eval(&block)
+
+        ::ObjectifiedSessions.session_class = @objsession_class
+      end
+
       def set_new_controller_instance
         @controller_instance = new_spec_controller_instance
         @controller_class = @controller_instance.class
