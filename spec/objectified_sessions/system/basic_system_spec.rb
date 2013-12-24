@@ -1,8 +1,10 @@
 require 'objectified_sessions'
 require "objectified_sessions/helpers/controller_helper"
+require "objectified_sessions/helpers/exception_helpers"
 
 describe "ObjectifiedSessions basic operations", :type => :controller do
   include ObjectifiedSessions::Helpers::ControllerHelper
+  include ObjectifiedSessions::Helpers::ExceptionHelpers
 
   before :each do
     set_new_controller_instance
@@ -46,6 +48,51 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
 
     expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
     @controller_instance.objsession.get_foo.should == 234
+  end
+
+  it "should allow hash access to the underlying session" do
+    define_objsession_class do
+      field :foo, :visibility => :private
+
+      def set_foo(x)
+        self[:foo] = x
+      end
+
+      def get_foo
+        self[:foo]
+      end
+    end
+
+    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    @controller_instance.objsession.set_foo(123)
+
+    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    @controller_instance.objsession.get_foo.should == 234
+  end
+
+  it "should not allow hash access to the underlying session for undefined fields" do
+    define_objsession_class do
+      field :foo, :visibility => :private
+      field :baz
+
+      def set_bar(x)
+        self[:bar] = x
+      end
+
+      def get_bar
+        self[:bar]
+      end
+    end
+
+    e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @controller_instance.objsession.set_bar(123) }
+    e.message.should match(/bar/i)
+    e.message.should match(/foo/i)
+    e.message.should match(/baz/i)
+
+    e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @controller_instance.objsession.get_bar }
+    e.message.should match(/bar/i)
+    e.message.should match(/foo/i)
+    e.message.should match(/baz/i)
   end
 
   it "should call the included module something sane"

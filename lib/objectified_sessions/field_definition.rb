@@ -1,10 +1,20 @@
 module ObjectifiedSessions
   class FieldDefinition
+    class << self
+      def normalize_name(name)
+        unless name.kind_of?(String) || name.kind_of?(Symbol)
+          raise ArgumentError, "A field name must be a String or Symbol, not: #{name.inspect}"
+        end
+
+        name.to_s.strip.downcase.to_sym
+      end
+    end
+
     attr_reader :name
 
     def initialize(session_class, name, options = { })
       @session_class = session_class
-      @name = name.to_s.strip.downcase.to_sym
+      @name = self.class.normalize_name(name)
       @options = options
 
       create_methods!
