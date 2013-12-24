@@ -244,7 +244,22 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
 
     allow(@underlying_session).to receive(:[]).once.with(:b).and_return(456)
     @controller_instance.objsession.bar.should == 456
+
+    lambda { @controller_instance.objsession.send(:f) }.should raise_error(NoMethodError)
+    lambda { @controller_instance.objsession.send(:f=) }.should raise_error(NoMethodError)
+    lambda { @controller_instance.objsession.send(:b) }.should raise_error(NoMethodError)
+    lambda { @controller_instance.objsession.send(:b=) }.should raise_error(NoMethodError)
+
+    lambda { @controller_instance.objsession.send(:[], :f) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @controller_instance.objsession.send(:[]=, :f, 123) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @controller_instance.objsession.send(:[], :b) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @controller_instance.objsession.send(:[]=, :b, 123) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
   end
 
-  it "should call the included module something sane"
+  it "should call the included module something sane" do
+    define_objsession_class(:IncludedModuleSpecObjSession) { field :foo }
+
+    included = @controller_instance.objsession.class.included_modules.detect { |m| m.name =~ /objectifiedsessions/i }
+    included.should be
+  end
 end

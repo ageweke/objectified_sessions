@@ -13,9 +13,14 @@ module ObjectifiedSessions
         instance
       end
 
-      def define_objsession_class(&block)
+      def define_objsession_class(name = nil, &block)
         @objsession_class = Class.new(::ObjectifiedSessions::Base)
         @objsession_class.class_eval(&block)
+
+        if name
+          ::Object.send(:remove_const, name) if ::Object.const_defined?(name)
+          ::Object.send(:const_set, name, @objsession_class)
+        end
 
         ::ObjectifiedSessions.session_class = @objsession_class
       end
