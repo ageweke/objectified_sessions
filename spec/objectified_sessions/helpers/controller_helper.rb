@@ -27,11 +27,13 @@ module ObjectifiedSessions
         @underlying_session = @controller_instance.session
       end
 
-      def should_be_using_prefix(prefix)
-        prefix_set = false
+      def should_be_using_prefix(prefix, should_require_set = false)
+        prefix_set = (! should_require_set)
 
-        expect(@underlying_session).to receive(:[]=).once.with(prefix, { }) do
-          prefix_set = true
+        if should_require_set
+          expect(@underlying_session).to receive(:[]=).once.with(prefix, { }) do
+            prefix_set = true
+          end
         end
 
         @prefixed_underlying_session = double("prefixed_underlying_session")

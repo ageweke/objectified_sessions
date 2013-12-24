@@ -6,6 +6,7 @@ module ObjectifiedSessions
   class Base
     def initialize(underlying_session)
       @_base_underlying_session = underlying_session
+      _delete_unknown_fields_if_needed!
     end
 
     private
@@ -26,10 +27,22 @@ module ObjectifiedSessions
       end
     end
 
+    def _delete_unknown_fields_if_needed!
+      if self.class.unknown_fields == :delete
+        underlying = _objectified_sessions_underlying_session(false)
+
+        if underlying
+          unknown = underlying.keys.select { |k| ! self.class._field_named(k) }
+          underlying.delete(unknown) if unknown.length > 0
+        end
+      end
+    end
+
     def [](field_name)
       self.class._ensure_has_field_named(field_name)
 
-      _objectified_sessions_underlying_session(false)[field_name]
+      underlying = _objectified_sessions_underlying_session(false)
+      underlying[field_name] if underlying
     end
 
     def []=(field_name, new_value)
@@ -52,6 +65,16 @@ module ObjectifiedSessions
           @prefix = if new_prefix then new_prefix.to_s.strip.downcase.to_sym else nil end
         else
           @prefix
+        end
+      end
+
+      def unknown_fields(what_to_do = nil)
+        if what_to_do == nil
+          @unknown_fields ||= :preserve
+        elsif [ :delete, :preserve ].include?(what_to_do)
+          @unknown_fields = what_to_do
+        else
+          raise ArgumentError, "You must pass :delete or :preserve, not: #{what_to_do.inspect}"
         end
       end
 
