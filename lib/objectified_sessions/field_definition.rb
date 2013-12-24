@@ -28,11 +28,11 @@ module ObjectifiedSessions
       dmm = @session_class._dynamic_methods_module
 
       dmm.define_method(name) do
-        _objectified_sessions_underlying_session[fn]
+        self[fn]
       end
 
       dmm.define_method("#{name}=") do |new_value|
-        _objectified_sessions_underlying_session[fn] = new_value
+        self[fn] = new_value
       end
 
       if options[:visibility] == :private

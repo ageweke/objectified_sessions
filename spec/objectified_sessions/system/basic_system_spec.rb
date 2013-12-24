@@ -95,5 +95,41 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     e.message.should match(/baz/i)
   end
 
+  it "should allow setting a prefix, and then the underlying session should always be accessed via that Hash" do
+    define_objsession_class do
+      prefix :prf
+
+      field :foo
+      field :bar
+    end
+
+    @objsession_class.prefix.should == :prf
+
+    should_be_using_prefix(:prf)
+
+    expect(@prefixed_underlying_session).to receive(:[]=).once.with(:foo, 123)
+    @controller_instance.objsession.foo = 123
+
+    expect(@prefixed_underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    @controller_instance.objsession.foo.should == 234
+  end
+
+  it "should allow setting the prefix to nil, which shouldn't change anything" do
+    define_objsession_class do
+      prefix nil
+
+      field :foo
+      field :bar
+    end
+
+    @objsession_class.prefix.should == nil
+
+    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    @controller_instance.objsession.foo = 123
+
+    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    @controller_instance.objsession.foo.should == 234
+  end
+
   it "should call the included module something sane"
 end
