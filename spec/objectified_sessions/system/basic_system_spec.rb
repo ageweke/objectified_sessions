@@ -198,5 +198,31 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     @controller_instance.objsession.foo.should == 123
   end
 
+  it "should treat symbols and strings in received data identically" do
+    define_objsession_class do
+      prefix :prf
+      unknown_fields :delete
+
+      field :foo
+      field :bar
+    end
+
+    should_be_using_prefix(:prf, false)
+    allow(@underlying_session).to receive(:keys).and_return([ 'foo', 'prf', :baz, :quux ])
+    allow(@prefixed_underlying_session).to receive(:keys).and_return([ 'foo', 'aaa', :bbb, :bar ])
+
+    expect(@prefixed_underlying_session).to receive(:delete).once do |arr|
+      unless arr.sort_by(&:to_s) == [ 'aaa', :bbb ].sort_by(&:to_s)
+        raise "Received :delete with incorrect arguments: #{arr.inspect}"
+      end
+    end
+
+    allow(@prefixed_underlying_session).to receive(:[]).with(:foo).and_return(123)
+    allow(@prefixed_underlying_session).to receive(:[]).with(:bar).and_return(345)
+
+    @controller_instance.objsession.foo.should == 123
+    @controller_instance.objsession.bar.should == 345
+  end
+
   it "should call the included module something sane"
 end
