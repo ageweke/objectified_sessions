@@ -85,11 +85,15 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     end
 
     e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @controller_instance.objsession.set_bar(123) }
+    e.session_class.should be(@objsession_class)
+    e.field_name.should == :bar
     e.message.should match(/bar/i)
     e.message.should match(/foo/i)
     e.message.should match(/baz/i)
 
     e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @controller_instance.objsession.get_bar }
+    e.session_class.should be(@objsession_class)
+    e.field_name.should == :bar
     e.message.should match(/bar/i)
     e.message.should match(/foo/i)
     e.message.should match(/baz/i)
@@ -261,5 +265,35 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
 
     included = @controller_instance.objsession.class.included_modules.detect { |m| m.name =~ /objectifiedsessions/i }
     included.should be
+  end
+
+  it "should not let you define more than one field with the same name" do
+    e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+      define_objsession_class do
+        field :foo
+        field 'foo'
+      end
+    end
+
+    e.session_class.should be(@objsession_class)
+    e.field_name.should == :foo
+    e.message.should match(/foo/i)
+  end
+
+  it "should not let you define more than one field with the same storage name" do
+    e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+      define_objsession_class do
+        field :foo, :storage => :bar
+        field :baz, :storage => :bar
+      end
+    end
+
+    e.session_class.should be(@objsession_class)
+    e.original_field_name.should == :foo
+    e.new_field_name.should == :baz
+    e.storage_name.should == :bar
+    e.message.should match(/foo/i)
+    e.message.should match(/baz/i)
+    e.message.should match(/bar/i)
   end
 end

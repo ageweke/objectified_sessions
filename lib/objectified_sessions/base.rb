@@ -58,6 +58,15 @@ module ObjectifiedSessions
         @fields_by_storage_name ||= { }
 
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
+
+        if @fields[new_field.name]
+          raise ObjectifiedSessions::Errors::DuplicateFieldNameError.new(self, new_field.name)
+        end
+
+        if @fields_by_storage_name[new_field.storage_name]
+          raise ObjectifiedSessions::Errors::DuplicateFieldStorageNameError.new(self, @fields_by_storage_name[new_field.storage_name].name, new_field.name, new_field.storage_name)
+        end
+
         @fields[new_field.name] = new_field
         @fields_by_storage_name[new_field.storage_name] = new_field
       end
