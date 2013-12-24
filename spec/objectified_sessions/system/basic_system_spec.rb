@@ -295,5 +295,19 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
     e.message.should match(/foo/i)
     e.message.should match(/baz/i)
     e.message.should match(/bar/i)
+
+    e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+      define_objsession_class do
+        field :foo, :storage => :bar
+        field :bar
+      end
+    end
+
+    e.session_class.should be(@objsession_class)
+    e.original_field_name.should == :foo
+    e.new_field_name.should == :bar
+    e.storage_name.should == :bar
+    e.message.should match(/foo/i)
+    e.message.should match(/bar/i)
   end
 end
