@@ -367,4 +367,24 @@ describe "ObjectifiedSessions basic operations", :type => :controller do
       @controller_instance.objsession.foo.should == 234
     end
   end
+
+  it "should let you override a method, and #super should still work" do
+    define_objsession_class do
+      field :foo
+
+      def foo
+        "X" + super + "Y"
+      end
+
+      def foo=(x)
+        super("A" + x + "B")
+      end
+    end
+
+    expect(@underlying_session).to receive(:[]=).once.with(:foo, "AzB")
+    @controller_instance.objsession.foo = 'z'
+
+    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return("q")
+    @controller_instance.objsession.foo.should == 'XqY'
+  end
 end
