@@ -11,11 +11,11 @@ module ObjectifiedSessions
         @session_class = session_class
         @field_name = field_name
 
-        super("Class #{@session_class.name} has no field named #{@field_name.inspect}; its fields are: #{all_field_names.inspect}")
+        super("Class #{@session_class.name} has no field named #{@field_name.inspect}; its fields are: #{accessible_field_names.inspect}")
       end
 
-      def all_field_names
-        session_class.all_field_names
+      def accessible_field_names
+        session_class.accessible_field_names
       end
     end
 

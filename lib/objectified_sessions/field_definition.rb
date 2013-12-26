@@ -26,8 +26,12 @@ module ObjectifiedSessions
       @storage_name || name
     end
 
-    def retired?
-      options[:retired]
+    def delete_data_with_storage_name?
+      !! options[:retired]
+    end
+
+    def allow_access_to_data?
+      ! (options[:retired] || options[:inactive])
     end
 
     private
@@ -40,6 +44,8 @@ module ObjectifiedSessions
     end
 
     def create_methods!
+      return if (options[:retired] || options[:inactive])
+
       fn = name
       dmm = @session_class._dynamic_methods_module
 

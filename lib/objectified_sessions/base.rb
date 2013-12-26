@@ -34,7 +34,7 @@ module ObjectifiedSessions
         if underlying
           unknown = underlying.keys.select do |k|
             field = self.class._field_with_storage_name(k)
-            (! field) || field.retired?
+            (! field) || field.delete_data_with_storage_name?
           end
           underlying.delete(unknown) if unknown.length > 0
         end
@@ -78,6 +78,10 @@ module ObjectifiedSessions
         field(name, options.merge(:retired => true))
       end
 
+      def inactive(name, options = { })
+        field(name, options.merge(:inactive => true))
+      end
+
       def prefix(new_prefix = nil)
         if new_prefix
           @prefix = if new_prefix then new_prefix.to_s.strip.downcase.to_sym else nil end
@@ -96,8 +100,8 @@ module ObjectifiedSessions
         end
       end
 
-      def all_field_names
-        @fields.keys
+      def accessible_field_names
+        @fields.values.select { |f| f.allow_access_to_data? }.map(&:name)
       end
 
       def _field_named(name)
@@ -111,7 +115,9 @@ module ObjectifiedSessions
       end
 
       def _ensure_has_field_named(name)
-        _field_named(name) || (raise ObjectifiedSessions::Errors::NoSuchFieldError.new(self, name))
+        out = _field_named(name)
+        out = nil if out && (! out.allow_access_to_data?)
+        out || (raise ObjectifiedSessions::Errors::NoSuchFieldError.new(self, name))
       end
 
       def _dynamic_methods_module
