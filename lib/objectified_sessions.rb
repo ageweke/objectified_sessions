@@ -1,6 +1,7 @@
 require "action_controller"
 require "objectified_sessions/version"
 require "objectified_sessions/base"
+require "objectified_session_generator"
 
 module ObjectifiedSessions
   DEFAULT_OBJSESSION_CLASS_NAME = "Objsession"
