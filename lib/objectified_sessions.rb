@@ -21,12 +21,33 @@ got an exception from the call to #{klass.name}.new:
       end
 
       unless out.kind_of?(::ObjectifiedSessions::Base)
-        raise ""
+        raise ObjectifiedSessions::Errors::CannotCreateSessionError, %{When objectified_sessions went to create a new instance of the session class, it
+got back an object that isn't an instance of a subclass of ObjectifiedSessions::Base.
+
+It got back an instance of #{out.class.name}:
+#{out.inspect}}
       end
 
       out
     end
 
+    def session_class
+      @session_class ||= DEFAULT_OBJSESSION_CLASS_NAME
+    end
+
+    def session_class=(target_class)
+      unless [ String, Symbol, Class ].include?(target_class.class)
+        raise ArgumentError, "You must pass a String, Symbol, or Class, not: #{target_class.inspect}"
+      end
+
+      if target_class.kind_of?(String) || target_class.kind_of?(Symbol)
+        target_class = target_class.to_s.camelize
+      end
+
+      @session_class = target_class
+    end
+
+    private
     def _session_class_object
       klass = session_class
 
@@ -56,22 +77,6 @@ but, when we called #constantize on it, we got the following NameError:
       end
 
       klass
-    end
-
-    def session_class
-      @session_class ||= DEFAULT_OBJSESSION_CLASS_NAME
-    end
-
-    def session_class=(target_class)
-      unless [ String, Symbol, Class ].include?(target_class.class)
-        raise ArgumentError, "You must pass a String, Symbol, or Class, not: #{target_class.inspect}"
-      end
-
-      if target_class.kind_of?(String) || target_class.kind_of?(Symbol)
-        target_class = target_class.to_s.camelize
-      end
-
-      @session_class = target_class
     end
   end
 end
