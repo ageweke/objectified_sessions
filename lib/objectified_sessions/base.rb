@@ -60,6 +60,7 @@ module ObjectifiedSessions
         @fields ||= { }
         @fields_by_storage_name ||= { }
 
+        options = { :visibility => default_visibility }.merge(options)
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
 
         if @fields[new_field.name]
@@ -80,6 +81,18 @@ module ObjectifiedSessions
 
       def inactive(name, options = { })
         field(name, options.merge(:inactive => true))
+      end
+
+      def default_visibility(new_visibility = nil)
+        if new_visibility
+          if [ :public, :private ].include?(new_visibility)
+            @default_visibility = new_visibility
+          else
+            raise ArgumentError, "Invalid default visibility: #{new_visibility.inspect}"
+          end
+        else
+          @default_visibility ||= :public
+        end
       end
 
       def prefix(new_prefix = nil)
