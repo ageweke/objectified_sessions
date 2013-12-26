@@ -89,7 +89,7 @@ module ObjectifiedSessions
           if [ :public, :private ].include?(new_visibility)
             @default_visibility = new_visibility
           else
-            raise ArgumentError, "Invalid default visibility: #{new_visibility.inspect}"
+            raise ArgumentError, "Invalid default visibility: #{new_visibility.inspect}; must be :public or :private"
           end
         else
           @default_visibility ||= :public
@@ -97,8 +97,10 @@ module ObjectifiedSessions
       end
 
       def prefix(new_prefix = nil)
-        if new_prefix
+        if new_prefix.kind_of?(String) || new_prefix.kind_of?(Symbol)
           @prefix = if new_prefix then new_prefix.to_s.strip.downcase else nil end
+        elsif new_prefix
+          raise ArgumentError, "Invalid prefix; must be a String or Symbol: #{new_prefix.inspect}"
         else
           @prefix
         end
