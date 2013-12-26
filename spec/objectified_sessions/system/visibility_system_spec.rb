@@ -28,10 +28,10 @@ describe "ObjectifiedSessions visibility" do
     lambda { @controller_instance.objsession.foo }.should raise_error(NoMethodError)
     lambda { @controller_instance.objsession.foo = 123 }.should raise_error(NoMethodError)
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.set_foo(123)
 
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.get_foo.should == 234
   end
 
@@ -48,14 +48,14 @@ describe "ObjectifiedSessions visibility" do
     lambda { @controller_instance.objsession.foo }.should raise_error(NoMethodError)
     lambda { @controller_instance.objsession.foo = 123 }.should raise_error(NoMethodError)
 
-    expect(@underlying_session).to receive(:[]=).once.with(:bar, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('bar', 123)
     @controller_instance.objsession.bar = 123
-    expect(@underlying_session).to receive(:[]).once.with(:bar).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('bar').and_return(234)
     @controller_instance.objsession.bar.should == 234
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.send(:foo=, 123)
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.send(:foo).should == 234
   end
 end

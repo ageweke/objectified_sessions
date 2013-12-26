@@ -61,6 +61,7 @@ module ObjectifiedSessions
         @fields_by_storage_name ||= { }
 
         options = { :visibility => default_visibility }.merge(options)
+        options[:type] ||= :normal
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
 
         if @fields[new_field.name]
@@ -76,11 +77,11 @@ module ObjectifiedSessions
       end
 
       def retired(name, options = { })
-        field(name, options.merge(:retired => true))
+        field(name, options.merge(:type => :retired))
       end
 
       def inactive(name, options = { })
-        field(name, options.merge(:inactive => true))
+        field(name, options.merge(:type => :inactive))
       end
 
       def default_visibility(new_visibility = nil)
@@ -97,7 +98,7 @@ module ObjectifiedSessions
 
       def prefix(new_prefix = nil)
         if new_prefix
-          @prefix = if new_prefix then new_prefix.to_s.strip.downcase.to_sym else nil end
+          @prefix = if new_prefix then new_prefix.to_s.strip.downcase else nil end
         else
           @prefix
         end
@@ -123,7 +124,7 @@ module ObjectifiedSessions
       end
 
       def _field_with_storage_name(storage_name)
-        storage_name = ObjectifiedSessions::FieldDefinition.normalize_name(storage_name)
+        storage_name = ObjectifiedSessions::FieldDefinition.normalize_name(storage_name).to_s
         @fields_by_storage_name[storage_name]
       end
 

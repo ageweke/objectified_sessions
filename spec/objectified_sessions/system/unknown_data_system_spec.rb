@@ -14,7 +14,7 @@ describe "ObjectifiedSessions unknown-data handling" do
     define_objsession_class { field :foo; field :bar }
 
     allow(@underlying_session).to receive(:keys).with().and_return([ :foo, :baz, :quux ])
-    allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+    allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
     @controller_instance.objsession.foo.should == 234
   end
@@ -34,7 +34,7 @@ describe "ObjectifiedSessions unknown-data handling" do
       end
     end
 
-    allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+    allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
     @controller_instance.objsession.foo.should == 234
   end
@@ -48,7 +48,7 @@ describe "ObjectifiedSessions unknown-data handling" do
       field :bar
     end
 
-    should_be_using_prefix(:prf, false)
+    should_be_using_prefix('prf', false)
     allow(@underlying_session).to receive(:keys).and_return([ :foo, :prf, :baz, :quux ])
     allow(@prefixed_underlying_session).to receive(:keys).and_return([ :foo, :aaa, :bbb ])
 
@@ -58,7 +58,7 @@ describe "ObjectifiedSessions unknown-data handling" do
       end
     end
 
-    allow(@prefixed_underlying_session).to receive(:[]).with(:foo).and_return(123)
+    allow(@prefixed_underlying_session).to receive(:[]).with('foo').and_return(123)
 
     @controller_instance.objsession.foo.should == 123
   end

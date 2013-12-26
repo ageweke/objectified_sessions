@@ -18,10 +18,10 @@ describe "ObjectifiedSessions basic operations" do
   it "should allow setting and getting a defined field, and read/write that on the underlying session" do
     define_objsession_class { field :foo }
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.foo = 123
 
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.foo.should == 234
   end
 
@@ -38,10 +38,10 @@ describe "ObjectifiedSessions basic operations" do
       end
     end
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.set_foo(123)
 
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.get_foo.should == 234
   end
 
@@ -76,32 +76,6 @@ describe "ObjectifiedSessions basic operations" do
     e.message.should match(/baz/i)
   end
 
-  it "should treat symbols and strings in received data identically" do
-    define_objsession_class do
-      prefix :prf
-      unknown_fields :delete
-
-      field :foo
-      field :bar
-    end
-
-    should_be_using_prefix(:prf, false)
-    allow(@underlying_session).to receive(:keys).and_return([ 'foo', 'prf', :baz, :quux ])
-    allow(@prefixed_underlying_session).to receive(:keys).and_return([ 'foo', 'aaa', :bbb, :bar ])
-
-    expect(@prefixed_underlying_session).to receive(:delete).once do |arr|
-      unless arr.sort_by(&:to_s) == [ 'aaa', :bbb ].sort_by(&:to_s)
-        raise "Received :delete with incorrect arguments: #{arr.inspect}"
-      end
-    end
-
-    allow(@prefixed_underlying_session).to receive(:[]).with(:foo).and_return(123)
-    allow(@prefixed_underlying_session).to receive(:[]).with(:bar).and_return(345)
-
-    @controller_instance.objsession.foo.should == 123
-    @controller_instance.objsession.bar.should == 345
-  end
-
   it "should allow setting a storage name for a field, and should use that when talking to the underlying session" do
     define_objsession_class do
       unknown_fields :delete
@@ -114,13 +88,13 @@ describe "ObjectifiedSessions basic operations" do
     expect(@underlying_session).to receive(:delete).once.with([ :foo ])
 
 
-    expect(@underlying_session).to receive(:[]=).once.with(:f, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('f', 123)
     @controller_instance.objsession.foo = 123
 
-    expect(@underlying_session).to receive(:[]).once.with(:f).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('f').and_return(234)
     @controller_instance.objsession.foo.should == 234
 
-    allow(@underlying_session).to receive(:[]).once.with(:b).and_return(456)
+    allow(@underlying_session).to receive(:[]).once.with('b').and_return(456)
     @controller_instance.objsession.bar.should == 456
 
     lambda { @controller_instance.objsession.send(:f) }.should raise_error(NoMethodError)
@@ -165,7 +139,7 @@ describe "ObjectifiedSessions basic operations" do
     e.session_class.should be(@objsession_class)
     e.original_field_name.should == :foo
     e.new_field_name.should == :baz
-    e.storage_name.should == :bar
+    e.storage_name.should == 'bar'
     e.message.should match(/foo/i)
     e.message.should match(/baz/i)
     e.message.should match(/bar/i)
@@ -180,7 +154,7 @@ describe "ObjectifiedSessions basic operations" do
     e.session_class.should be(@objsession_class)
     e.original_field_name.should == :foo
     e.new_field_name.should == :bar
-    e.storage_name.should == :bar
+    e.storage_name.should == 'bar'
     e.message.should match(/foo/i)
     e.message.should match(/bar/i)
   end

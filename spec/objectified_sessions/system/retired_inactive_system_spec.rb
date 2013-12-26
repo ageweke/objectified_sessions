@@ -46,7 +46,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
       e.session_class.should be(@objsession_class)
       e.original_field_name.should == :foo
       e.new_field_name.should == :bar
-      e.storage_name.should == :foo
+      e.storage_name.should == 'foo'
       e.message.should match(/foo/i)
       e.message.should match(/bar/i)
     end
@@ -57,7 +57,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
         retired :bar
       end
 
-      allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+      allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
       @controller_instance.objsession.foo.should == 234
 
@@ -83,7 +83,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
       allow(@underlying_session).to receive(:keys).with().and_return([ :foo, :bar ])
       expect(@underlying_session).to receive(:delete).once.with([ :bar ])
 
-      allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+      allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
       @controller_instance.objsession.foo.should == 234
     end
@@ -124,7 +124,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
       e.session_class.should be(@objsession_class)
       e.original_field_name.should == :foo
       e.new_field_name.should == :bar
-      e.storage_name.should == :foo
+      e.storage_name.should == 'foo'
       e.message.should match(/foo/i)
       e.message.should match(/bar/i)
     end
@@ -135,7 +135,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
         inactive :bar
       end
 
-      allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+      allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
       @controller_instance.objsession.foo.should == 234
 
@@ -160,7 +160,7 @@ describe "ObjectifiedSessions retired and inactive field handling" do
 
       allow(@underlying_session).to receive(:keys).with().and_return([ :foo, :bar ])
 
-      allow(@underlying_session).to receive(:[]).with(:foo).and_return(234)
+      allow(@underlying_session).to receive(:[]).with('foo').and_return(234)
 
       @controller_instance.objsession.foo.should == 234
     end
@@ -179,10 +179,10 @@ describe "ObjectifiedSessions retired and inactive field handling" do
       end
     end
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, "AzB")
+    expect(@underlying_session).to receive(:[]=).once.with('foo', "AzB")
     @controller_instance.objsession.foo = 'z'
 
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return("q")
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return("q")
     @controller_instance.objsession.foo.should == 'XqY'
   end
 end

@@ -18,14 +18,14 @@ describe "ObjectifiedSessions prefix" do
       field :bar
     end
 
-    @objsession_class.prefix.should == :prf
+    @objsession_class.prefix.should == 'prf'
 
-    should_be_using_prefix(:prf, true)
+    should_be_using_prefix('prf', true)
 
-    expect(@prefixed_underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@prefixed_underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.foo = 123
 
-    expect(@prefixed_underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@prefixed_underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.foo.should == 234
   end
 
@@ -37,7 +37,7 @@ describe "ObjectifiedSessions prefix" do
       field :bar
     end
 
-    allow(@underlying_session).to receive(:[]).with(:prf).and_return(nil)
+    allow(@underlying_session).to receive(:[]).with('prf').and_return(nil)
 
     @controller_instance.objsession.foo.should == nil
     @controller_instance.objsession.bar.should == nil
@@ -53,10 +53,10 @@ describe "ObjectifiedSessions prefix" do
 
     @objsession_class.prefix.should == nil
 
-    expect(@underlying_session).to receive(:[]=).once.with(:foo, 123)
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
     @controller_instance.objsession.foo = 123
 
-    expect(@underlying_session).to receive(:[]).once.with(:foo).and_return(234)
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.foo.should == 234
   end
 end
