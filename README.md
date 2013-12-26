@@ -19,7 +19,8 @@ Using ObjectifiedSessions:
 * You can define exactly what session fields can be used, and control access to them through accessor methods that you
   can override to do anything you want. You can validate stored data, apply defaults when returning data, and so on.
   You can ensure that data is carefully filtered to store it in the most-compact possible format, and unpack it before
-  returning it.
+  returning it. (For example, you can store values as simple integers in the session to save space, but read and write
+  them using clear, easy symbols from client code.)
 * You can eliminate the tension between using long, descriptive, maintainable names for session data &mdash;
   and hence wasting very valuable session storage space &mdash; and using compact, unmaintainable names to save
   space is gone. _Storage aliases_ let you access data using a long, descriptive name, while ObjectifiedSessions
@@ -50,7 +51,29 @@ Or install it yourself as:
 
 ## Usage
 
+#### Quick Start
 
+Simply installing the Gem won't break anything. However, before the #objsession call from inside a controller will
+work, you need to create the class that implements your session. The simplest way to do this is by running
+`rails generate objectified_session`; this will write a file to `lib/objsession.rb` that defines an empty
+objectified session.
+
+To start storing data, you need to define one or more fields on your session:
+
+    class Objsession < ::ObjectifiedSessions::Base
+      field :last_login
+      field :user_id
+    end
+
+...and now you can use it from controllers (or anywhere else, if you pass around the `#objsession` object) via:
+
+    objsession.last_login = Time.now
+    User.find(objsession.user_id)
+
+...and so on.
+
+Already, you have a single point where all known session fields are defined (assuming you're not using any old-style
+calls to `#session`.)
 
 ## Contributing
 
