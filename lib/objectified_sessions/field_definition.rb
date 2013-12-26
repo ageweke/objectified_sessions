@@ -6,7 +6,7 @@ module ObjectifiedSessions
           raise ArgumentError, "A field name must be a String or Symbol, not: #{name.inspect}"
         end
 
-        name.to_s.strip.downcase.to_sym
+        name.to_s.strip.to_sym
       end
     end
 
@@ -61,17 +61,18 @@ module ObjectifiedSessions
 
       fn = name
       dmm = @session_class._dynamic_methods_module
+      mn = name.to_s.downcase
 
-      dmm.define_method(name) do
+      dmm.define_method(mn) do
         self[fn]
       end
 
-      dmm.define_method("#{name}=") do |new_value|
+      dmm.define_method("#{mn}=") do |new_value|
         self[fn] = new_value
       end
 
       if visibility == :private
-        dmm.send(:private, name, "#{name}=".to_sym)
+        dmm.send(:private, mn, "#{mn}=".to_sym)
       end
     end
   end

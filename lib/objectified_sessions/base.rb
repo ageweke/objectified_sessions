@@ -98,7 +98,7 @@ module ObjectifiedSessions
 
       def prefix(new_prefix = nil)
         if new_prefix.kind_of?(String) || new_prefix.kind_of?(Symbol)
-          @prefix = if new_prefix then new_prefix.to_s.strip.downcase else nil end
+          @prefix = if new_prefix then new_prefix.to_s.strip else nil end
         elsif new_prefix
           raise ArgumentError, "Invalid prefix; must be a String or Symbol: #{new_prefix.inspect}"
         else

@@ -93,6 +93,48 @@ describe "ObjectifiedSessions error handling" do
     end
   end
 
+  describe "field specification" do
+    it "should raise a nice error if you don't pass a String or Symbol as your field name" do
+      e = capture_exception(ArgumentError) do
+        define_objsession_class do
+          field 123
+        end
+      end
+
+      e.message.should match(/123/)
+    end
+
+    it "should raise a nice error if you pass an invalid option" do
+      e = capture_exception(ArgumentError) do
+        define_objsession_class do
+          field :foo, :a => :b
+        end
+      end
+
+      e.message.should match(/a/)
+    end
+
+    it "should raise a nice error if you pass an invalid :storage option" do
+      e = capture_exception(ArgumentError) do
+        define_objsession_class do
+          field :foo, :storage => false
+        end
+      end
+
+      e.message.should match(/false/)
+    end
+
+    it "should raise a nice error if you pass an invalid :visibility option" do
+      e = capture_exception(ArgumentError) do
+        define_objsession_class do
+          field :foo, :visibility => 12345
+        end
+      end
+
+      e.message.should match(/12345/)
+    end
+  end
+
   it "should not allow hash access to the underlying session for undefined fields" do
     define_objsession_class do
       field :foo, :visibility => :private

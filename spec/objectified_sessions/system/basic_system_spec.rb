@@ -25,6 +25,16 @@ describe "ObjectifiedSessions basic operations" do
     @controller_instance.objsession.foo.should == 234
   end
 
+  it "should allow specifying a defined field as a String" do
+    define_objsession_class { field 'FoO' }
+
+    expect(@underlying_session).to receive(:[]=).once.with('FoO', 123)
+    @controller_instance.objsession.foo = 123
+
+    expect(@underlying_session).to receive(:[]).once.with('FoO').and_return(234)
+    @controller_instance.objsession.foo.should == 234
+  end
+
   it "should allow hash access to the underlying session" do
     define_objsession_class do
       field :foo, :visibility => :private
