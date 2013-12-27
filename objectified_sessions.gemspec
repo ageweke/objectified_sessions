@@ -38,7 +38,6 @@ Gem::Specification.new do |s|
   end
 
   if version_spec
-    s.add_dependency("activesupport", *version_spec)
-    s.add_dependency("actionpack", *version_spec)
+    s.add_dependency("rails", *version_spec)
   end
 end

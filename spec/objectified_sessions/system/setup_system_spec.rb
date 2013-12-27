@@ -28,4 +28,36 @@ describe "ObjectifiedSessions setup" do
     ::ObjectifiedSessions.session_class = SetupClassSpecifiedClass
     @controller_instance.objsession.class.should == SetupClassSpecifiedClass
   end
+
+  it "should be able to load the session class from a file on the load path" do
+    require 'tmpdir'
+    require 'fileutils'
+
+    dir = Dir.mktmpdir('objectified_sessions')
+    dir = File.expand_path(dir)
+
+    subdir = File.join(dir, 'foo')
+    FileUtils.mkdir_p(subdir)
+
+    target_file = File.join(subdir, 'bar.rb')
+    File.open(target_file, 'w') do |f|
+      f.puts <<-EOF
+module Foo
+  class Bar < ObjectifiedSessions::Base
+    field :foo
+  end
+end
+EOF
+    end
+
+    $: << dir
+    ::ObjectifiedSessions.session_class = "Foo::Bar"
+    @controller_instance.objsession.class.name.should == "Foo::Bar"
+
+    expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
+    @controller_instance.objsession.foo = 123
+
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
+    @controller_instance.objsession.foo.should == 234
+  end
 end
