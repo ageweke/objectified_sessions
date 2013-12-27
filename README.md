@@ -5,14 +5,11 @@ methods to, rather than a free-for-all Hash.
 
 By default, Rails models your session as a Hash. While this makes it really easy to use, it also makes it really easy
 to make a mess: as your app grows, you have to search the entire codebase for usage of `session` (a pretty common
-word) to figure out how it's being used. It's easy for it to grow almost without bound, and hard to keep a team of
-developers in sync about how it's being used. Further, the otherwise-extremely-nice
+word that's certain to be used in many irrelevant ways, as well) to figure out how it's being used. It's easy for it
+to grow almost without bound, and hard to keep a team of developers in sync about how it's being used. Further, the
+otherwise-extremely-nice
 [CookieStore](http://api.rubyonrails.org/classes/ActionDispatch/Session/CookieStore.html) exacerbates these problems
 &mdash; because you no longer have the power to change the sessions that are now stored in users' browsers, as cookies.
-
-You can integrate ObjectifiedSessions into your existing application seamlessly; by default, all its data is stored
-underneath a single (short) key in your existing sessions, so it won't conflict with existing code. However, you can
-also have it manage the entire session directly, if you want.
 
 Using ObjectifiedSessions:
 
@@ -35,6 +32,10 @@ Using ObjectifiedSessions:
 * Explicit field definition lets you immediately see exactly what data you're using.
 * There's absolutely no additional restriction on what you can store, vis-à-vis Rails' normal session support.
 
+And, best of all, you can migrate to ObjectifiedSessions completely incrementally; it interoperates perfectly with
+traditional session-handling code. You can migrate call site by call site, at your own pace; there's no need to
+migrate all at once, or even migrate all code for a given session key all at once.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -53,7 +54,7 @@ Or install it yourself as:
 
 #### Quick Start
 
-Simply installing the Gem won't break anything. However, before the #objsession call from inside a controller will
+Simply installing the Gem won't break anything. However, before the `#objsession` call from inside a controller will
 work, you need to create the class that implements your session. The simplest way to do this is by running
 `rails generate objectified_session`; this will write a file to `lib/objsession.rb` that defines an empty
 objectified session.
@@ -71,6 +72,13 @@ To start storing data, you need to define one or more fields on your session:
     User.find(objsession.user_id)
 
 ...and so on.
+
+The fields you define map exactly to traditional session fields &mdash; given the above, `objsession.user_id` and
+`session[:user_id]` will _always_ return exactly the same value, and assigning one will assign the other. In other
+words, ObjectifiedSessions is not doing anything magical or scary to your session; rather, it's simply giving you a
+very clean, maintainable interface on top of the `session` you already know and love. You can assign any value to a
+field that is supported by Rails' traditional `session`, from an integer to an array of dispearate Objects, or anything
+else you want.
 
 Already, you have a single point where all known session fields are defined (assuming you're not using any old-style
 calls to `#session`). Read on for more benefits.
@@ -244,13 +252,22 @@ key from the session.
     Be **absolutely certain** that one of the following is true: (a) you're only using `objsession` to access session
     data, (b) you've defined a `field` in your `objsession` for any data that your traditional session code touches,
     or (c) use a `prefix`, as discussed below.
-2. **Retired fields ARE deleted**. This is because by retiring a field, you're saying, "I will never use this data
+2. **Be aware of Gems or plugins that may use the session!** These may be storing data in the session that you're not
+    aware of, and that you won't discover by searching your codebase. To be safe, examine actual, real-world session
+    data and the keys that it's using. (Iterating over all sessions in `memcached`, for example, or tracking keys
+    used in all cookie-based sessions over the course of a whole day, can be very valuable, too.)
+3. **Retired fields ARE deleted**. This is because by retiring a field, you're saying, "I will never use this data
     again, but keep an eye on it for me to make sure I don't accidentally re-use that key". If you want to use
     `unknown_fields :delete` and don't want this behavior, use the `inactive` keyword instead of `retired`; it
     behaves identically (you can't access the data, and you can't define a field that conflicts), but it won't delete
     the data for that key.
-3. **Be extremely careful when removing or retiring fields**. This goes without saying, but, once you've deleted that
+4. **Be extremely careful when removing or retiring fields**. This goes without saying, but, once you've deleted that
     data, it's gone forever. If you have any doubt, use `inactive` until you're certain.
+5. Deletion doesn't happen unless you actually instantiate the ObjectifiedSession, which only happens when you call
+    `objsession` from inside a controller. This is intentional &mdash; we don't want ObjectifiedSessions to add any
+    overhead whatsoever until you need it. If you want to ensure that this happens on every request, simply add a
+    `before_filter` that calls `objsession`. (You don't need to read or write any fields, so simply calling
+    `objsession` is sufficient.)
 
 #### Partitioning Off the Session (Using a Prefix)
 
@@ -310,9 +327,42 @@ cases.
 (The only case where this actually matters is if you use a prefix; data stored under the prefix will be a Hash with
 Strings as keys, not Symbols.)
 
+#### Changing the Objectified-Session Class, and Session Loading
+
+If, for some reason, you want the class you use for your objectified session to be called something other than
+`Objsession`, you can change it like so in `config/application.rb`:
+
+    ObjectifiedSessions.session_class = :MyObjectifiedSession
+    # or ObjectifiedSessions.session_class = 'MyObjectifiedSession'
+    # or ObjectifiedSessions.session_class = MyObjectifiedSession
+    #   ...i.e., you can set a Class object itself
+
+If you use either the String or Symbol form, then ObjectifiedSessions will attempt to `require` the corresponding
+file before resolving the class (but won't fail if that doesn't work &mdash; only if it still can't resolve the
+class afterwards). This means that the class you use does need to either already be loaded, or the file it's in needs
+to be named correctly and on one of Rails' `load_paths`.
+
 #### Migrating To ObjectifiedSessions
 
-If you have a large base of
+If you have an existing application and want to migrate to ObjectifiedSessions bit by bit, here's how I'd do it:
+
+1. Install the gem.
+2. Run the generator (`rails generate objectified_session`).
+3. Find some traditional session-handling code.
+4. Make sure there's a `field` declared in the ObjectifiedSession for whatever key the traditional session-handling
+   code is using.
+5. Define methods on the ObjectifiedSession, if appropriate, to add appropriate functionality (value checking,
+   question-answering, and so on) around this field.
+6. Change the traditional session-handling code to use `objsession` and the new methods.
+7. Test, commit, and deploy.
+8. Repeat steps 3-7.
+
+The key point is that you don't have to migrate to ObjectifiedSessions all at once, or even all code that uses a single
+session field all at once.
+
+Once you're done, and you're _completely_ certain you've eliminated all use of traditional session code (and checked
+for Gems, plugins, or other code that may be using the session without your knowledge), you can set
+`unknown_fields :delete`, if you'd like.
 
 ## Contributing
 
