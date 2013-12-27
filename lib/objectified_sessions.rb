@@ -53,11 +53,24 @@ It got back an instance of #{out.class.name}:
       klass = session_class
 
       unless klass.kind_of?(Class)
+        path = nil
+        load_error = nil
+
         begin
+          path = klass.underscore
+
+          begin
+            require path
+          rescue LoadError => le
+            load_error = le
+          end
+
           klass = klass.constantize
         rescue NameError => ne
+          message = nil
+
           if klass.to_s == DEFAULT_OBJSESSION_CLASS_NAME.to_s
-            raise NameError, %{Before using objectified_sessions, you need to define the class that implements your
+            message = %{Before using objectified_sessions, you need to define the class that implements your
 objectfied session. By default, this is named #{klass.inspect}; simply create a class of
 that name, in the appropriate place in your project (e.g., lib/objsession.rb). You can
 run 'rails generate objectified_session' to do this for you.
@@ -68,12 +81,23 @@ Alternatively, tell objectified_sessions to use a particular class, by saying
 
 somewhere in your config/application.rb, or some similar initialization code.}
           else
-            raise NameError, %{When objectified_sessions went to create a new instance of the session class, it
+            message = %{When objectified_sessions went to create a new instance of the session class, it
 couldn't resolve the actual class. You specified #{klass.inspect} as the session class,
 but, when we called #constantize on it, we got the following NameError:
 
 (#{ne.class.name}) #{ne}}
           end
+
+          if load_error
+            message += %{
+
+(When we tried to require the file presumably containing this class (with 'require #{path.inspect}'),
+we got a LoadError: #{load_error.message}. This may not be an issue, if you have this class defined elsewhere; in
+that case, you can simply ignore the error. But it may also indicate that the file you've defined this class in,
+if any, isn't on the load path.)}
+          end
+
+          raise NameError, message
         end
       end
 
