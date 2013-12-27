@@ -2,8 +2,6 @@ module ObjectifiedSessions
   module Helpers
     module ControllerHelper
       def new_spec_controller_instance
-        ::ObjectifiedSessions._reset_for_specs!
-
         klass = Class.new(::ActionController::Base)
         klass_name = "SpecController#{rand(1_000_000_000)}"
         ::Object.const_set(klass_name, klass)

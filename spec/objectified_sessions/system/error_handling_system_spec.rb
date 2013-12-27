@@ -9,6 +9,7 @@ describe "ObjectifiedSessions error handling" do
   before :each do
     set_new_controller_instance
     ::ObjectifiedSessions.instance_variable_set("@session_class", nil)
+    ::ObjectifiedSessions.instance_variable_set("@_session_class_object", nil)
   end
 
   describe "session-class specification" do
