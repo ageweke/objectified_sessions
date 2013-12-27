@@ -59,5 +59,7 @@ EOF
 
     expect(@underlying_session).to receive(:[]).once.with('foo').and_return(234)
     @controller_instance.objsession.foo.should == 234
+
+    FileUtils.rm_rf(dir)
   end
 end

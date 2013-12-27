@@ -28,13 +28,13 @@ Gem::Specification.new do |s|
     s.add_development_dependency "pry-stack_explorer"
   end
 
-  actionpack_version = ENV['FLEX_COLUMNS_ACTIONPACK_TEST_VERSION']
-  actionpack_version = actionpack_version.strip if actionpack_version
+  rails_version = ENV['OBJECTIFIED_SESSIONS_RAILS_TEST_VERSION']
+  rails_version = rails_version.strip if rails_version
 
-  version_spec = case actionpack_version
+  version_spec = case rails_version
   when nil then [ ">= 3.0", "<= 4.99.99" ]
   when 'master' then nil
-  else [ "=#{actionpack_version}" ]
+  else [ "=#{rails_version}" ]
   end
 
   if version_spec
