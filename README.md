@@ -36,6 +36,8 @@ And, best of all, you can migrate to ObjectifiedSessions completely incrementall
 traditional session-handling code. You can migrate call site by call site, at your own pace; there's no need to
 migrate all at once, or even migrate all code for a given session key all at once.
 
+Current build status: ![Current Build Status](https://api.travis-ci.org/ageweke/objectified_sessions.png?branch=master)
+
 ## Installation
 
 Add this line to your application's Gemfile:

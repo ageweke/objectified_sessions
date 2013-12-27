@@ -3,10 +3,16 @@ require "objectified_sessions/version"
 require "objectified_sessions/base"
 require "objectified_session_generator"
 
+# ObjectifiedSessions is the outermost interface to the ObjectifiedSessions Gem. This module exists only as a namespace
+# (_i.e._, is not included into any classes), and has a single public method, #session_class, that lets you configure
+# which class is to be used as your +objsession+.
 module ObjectifiedSessions
   DEFAULT_OBJSESSION_CLASS_NAME = "Objsession"
 
   class << self
+    # Should be called from code internal to the ObjectifiedSessions Gem only. Given the underlying Session object
+    # (as returned by `#session` in a controller), creates a new instance of the correct objectified-session class
+    # and reutrns it.
     def _create_new_objsession(underlying_session)
       klass = _session_class_object
       out = nil
@@ -48,60 +54,66 @@ It got back an instance of #{out.class.name}:
       @session_class = target_class
     end
 
+    def _reset_for_specs!
+      @_session_class_object = nil
+    end
+
     private
     def _session_class_object
-      klass = session_class
+      @_session_class_object ||= begin
+        klass = session_class
 
-      unless klass.kind_of?(Class)
-        path = nil
-        load_error = nil
-
-        begin
-          path = klass.underscore
+        unless klass.kind_of?(Class)
+          path = nil
+          load_error = nil
 
           begin
-            require path
-          rescue LoadError => le
-            load_error = le
+            path = klass.underscore
+
+            begin
+              require path
+            rescue LoadError => le
+              load_error = le
+            end
+
+            klass = klass.constantize
+          rescue NameError => ne
+            message = nil
+
+            if klass.to_s == DEFAULT_OBJSESSION_CLASS_NAME.to_s
+              message = %{Before using objectified_sessions, you need to define the class that implements your
+  objectfied session. By default, this is named #{klass.inspect}; simply create a class of
+  that name, in the appropriate place in your project (e.g., lib/objsession.rb). You can
+  run 'rails generate objectified_session' to do this for you.
+
+  Alternatively, tell objectified_sessions to use a particular class, by saying
+
+    ObjectifiedSessions.session_class = <class name>
+
+  somewhere in your config/application.rb, or some similar initialization code.}
+            else
+              message = %{When objectified_sessions went to create a new instance of the session class, it
+  couldn't resolve the actual class. You specified #{klass.inspect} as the session class,
+  but, when we called #constantize on it, we got the following NameError:
+
+  (#{ne.class.name}) #{ne}}
+            end
+
+            if load_error
+              message += %{
+
+  (When we tried to require the file presumably containing this class (with 'require #{path.inspect}'),
+  we got a LoadError: #{load_error.message}. This may not be an issue, if you have this class defined elsewhere; in
+  that case, you can simply ignore the error. But it may also indicate that the file you've defined this class in,
+  if any, isn't on the load path.)}
+            end
+
+            raise NameError, message
           end
-
-          klass = klass.constantize
-        rescue NameError => ne
-          message = nil
-
-          if klass.to_s == DEFAULT_OBJSESSION_CLASS_NAME.to_s
-            message = %{Before using objectified_sessions, you need to define the class that implements your
-objectfied session. By default, this is named #{klass.inspect}; simply create a class of
-that name, in the appropriate place in your project (e.g., lib/objsession.rb). You can
-run 'rails generate objectified_session' to do this for you.
-
-Alternatively, tell objectified_sessions to use a particular class, by saying
-
-  ObjectifiedSessions.session_class = <class name>
-
-somewhere in your config/application.rb, or some similar initialization code.}
-          else
-            message = %{When objectified_sessions went to create a new instance of the session class, it
-couldn't resolve the actual class. You specified #{klass.inspect} as the session class,
-but, when we called #constantize on it, we got the following NameError:
-
-(#{ne.class.name}) #{ne}}
-          end
-
-          if load_error
-            message += %{
-
-(When we tried to require the file presumably containing this class (with 'require #{path.inspect}'),
-we got a LoadError: #{load_error.message}. This may not be an issue, if you have this class defined elsewhere; in
-that case, you can simply ignore the error. But it may also indicate that the file you've defined this class in,
-if any, isn't on the load path.)}
-          end
-
-          raise NameError, message
         end
-      end
 
-      klass
+        klass
+      end
     end
   end
 end

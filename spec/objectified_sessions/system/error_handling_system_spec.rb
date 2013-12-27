@@ -47,6 +47,10 @@ describe "ObjectifiedSessions error handling" do
         def to_s
           "woomba"
         end
+
+        def inspect
+          "woomba"
+        end
       end
 
       ::ObjectifiedSessions.session_class = :SomeOtherClass
