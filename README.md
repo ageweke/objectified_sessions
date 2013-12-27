@@ -77,7 +77,7 @@ The fields you define map exactly to traditional session fields &mdash; given th
 `session[:user_id]` will _always_ return exactly the same value, and assigning one will assign the other. In other
 words, ObjectifiedSessions is not doing anything magical or scary to your session; rather, it's simply giving you a
 very clean, maintainable interface on top of the `session` you already know and love. You can assign any value to a
-field that is supported by Rails' traditional `session`, from an integer to an array of dispearate Objects, or anything
+field that is supported by Rails' traditional `session`, from an integer to an array of disparate Objects, or anything
 else you want.
 
 Already, you have a single point where all known session fields are defined (assuming you're not using any old-style
@@ -191,6 +191,11 @@ Now, your controller looks like:
     end
 
 ...while you're now using three, rather than 23, bytes of storage space for the key for that field.
+
+**IMPORTANT**: Changing the storage alias for a field, or setting one, will cause _all existing data for that field
+to disappear_. (Hopefully this is obvious; this is because ObjectifiedSessions will now be looking under a different
+key for that data.) It is, however, safe to do the reverse, by renaming a field and setting its storage alias to
+be its old name.
 
 #### Retiring Fields
 
