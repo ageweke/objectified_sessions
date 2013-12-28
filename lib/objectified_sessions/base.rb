@@ -117,7 +117,11 @@ module ObjectifiedSessions
       end
 
       def accessible_field_names
-        @fields.values.select { |f| f.allow_access_to_data? }.map(&:name)
+        if @fields
+          @fields.values.select { |f| f.allow_access_to_data? }.map(&:name)
+        else
+          [ ]
+        end
       end
 
       def _field_named(name)
