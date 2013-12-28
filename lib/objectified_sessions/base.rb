@@ -79,27 +79,47 @@ module ObjectifiedSessions
       underlying[field.storage_name] if underlying
     end
 
-    # Stores a
+    # Stores a new value to the given field. +field_name+ can be specified as a String or a Symbol. If passed +nil+,
+    # will store +nil+ to the underlying session, which deletes the given key from the session entirely.
+    #
+    # If passed a field name that hasn't been defined on this class, raises
+    # ObjectifiedSessions::Errors::NoSuchFieldError.
     def []=(field_name, new_value)
       field = self.class._ensure_has_field_named(field_name)
       _objectified_sessions_underlying_session(true)[field.storage_name] = new_value
+      new_value
     end
 
     DYNAMIC_METHODS_MODULE_NAME = :ObjectifiedSessionsDynamicMethods
 
     class << self
+      # Defines a new field. +name+ is the name of the field, specified as either a String or a Symbol. +options+ can
+      # contain:
+      #
+      # [:visibility] If +:private+, methods generated for this field will be marked as private, meaning they can only
+      #               be accessed from inside the objectified-session class itself. If +:public+, methods will be
+      #               marked as public, making them accessible from anywhere. If omitted, the class's
+      #               #default_visibility will be used (which itself defaults to +:public+).
+      # [:storage] If specified, this field will be stored in the session under the given String or Symbol (which will
+      #            be converted to a String before being used). If not specified, data will be stored under the name of
+      #            the field (converted to a String), instead.
       def field(name, options = { })
         @fields ||= { }
         @fields_by_storage_name ||= { }
 
+        # Compute our effective options.
         options = { :visibility => default_visibility }.merge(options)
         options[:type] ||= :normal
+
+        # Create a new FieldDefinition instance.
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
 
+        # Check for a conflict with the field name.
         if @fields[new_field.name]
           raise ObjectifiedSessions::Errors::DuplicateFieldNameError.new(self, new_field.name)
         end
 
+        # Check for a conflict with the storage name.
         if @fields_by_storage_name[new_field.storage_name]
           raise ObjectifiedSessions::Errors::DuplicateFieldStorageNameError.new(self, @fields_by_storage_name[new_field.storage_name].name, new_field.name, new_field.storage_name)
         end

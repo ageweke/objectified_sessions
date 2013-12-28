@@ -120,6 +120,8 @@ describe ObjectifiedSessions::Base do
 
     it "should raise if asked for a field that doesn't exist" do
       e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @instance.send(:[], :bar) }
+      e.session_class.should be(@class)
+      e.field_name.should == :bar
       e.message.should match(/bar/i)
       e.message.should match(/foo/i)
     end
@@ -145,6 +147,125 @@ describe ObjectifiedSessions::Base do
       allow(@underlying_session).to receive(:[]).with('prf').and_return(nil)
 
       @instance.send(:[], 'foo').should == nil
+    end
+  end
+
+  describe "writing fields" do
+    before :each do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+
+      new_instance!
+    end
+
+    it "should raise if asked for a field that doesn't exist" do
+      e = capture_exception(ObjectifiedSessions::Errors::NoSuchFieldError) { @instance.send(:[]=, :bar, 123) }
+      e.session_class.should be(@class)
+      e.field_name.should == :bar
+      e.message.should match(/bar/i)
+      e.message.should match(/foo/i)
+    end
+
+    it "should assign data" do
+      expect(@underlying_session).to receive(:[]=).once.with('foo', 123)
+      @instance.send(:[]=, :foo, 123).should == 123
+    end
+
+    it "should assign data via the prefix, if one is set" do
+      @class.prefix :prf
+      allow_prefix!(:prf)
+
+      expect(@prefixed_underlying_session).to receive(:[]=).once.with('foo', 123)
+
+      @instance.send(:[]=, 'foo', 123).should == 123
+    end
+
+    it "should bind a hash to the prefix, if none is there" do
+      @class.prefix :prf
+
+
+      @prefixed_underlying_session = double("prefixed_underlying_session")
+      expect(@underlying_session).to receive(:[]).once.ordered.with('prf').and_return(nil)
+      expect(@underlying_session).to receive(:[]=).once.ordered.with('prf', { })
+      expect(@underlying_session).to receive(:[]).once.ordered.with('prf').and_return(@prefixed_underlying_session)
+
+      expect(@prefixed_underlying_session).to receive(:[]=).once.with('foo', 123)
+      @instance.send(:[]=, 'foo', 123).should == 123
+    end
+  end
+
+  describe "defining fields" do
+    it "should define a simple field, and make it retrievable" do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+
+      @class._field_named(:foo).should be(@field_foo)
+      @class._field_named('foo').should be(@field_foo)
+      @class._field_with_storage_name(:foo).should be(@field_foo)
+      @class._field_with_storage_name('foo').should be(@field_foo)
+    end
+
+    it "should allow you to change the visibility" do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :private })
+      @class.field :foo, :visibility => :private
+
+      @class._field_named(:foo).should be(@field_foo)
+      @class._field_named('foo').should be(@field_foo)
+      @class._field_with_storage_name(:foo).should be(@field_foo)
+      @class._field_with_storage_name('foo').should be(@field_foo)
+    end
+
+    it "should respect the default visibility" do
+      @class.default_visibility :private
+
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :private })
+      @class.field :foo
+
+      @class._field_named(:foo).should be(@field_foo)
+      @class._field_named('foo').should be(@field_foo)
+      @class._field_with_storage_name(:foo).should be(@field_foo)
+      @class._field_with_storage_name('foo').should be(@field_foo)
+    end
+
+    it "should allow you to change the storage name" do
+      @field_foo = expect_and_create_field!(:foo, 'bar', true, false, { :type => :normal, :visibility => :public, :storage => :bar })
+      @class.field :foo, :storage => :bar
+
+      @class._field_named(:foo).should be(@field_foo)
+      @class._field_named('foo').should be(@field_foo)
+      @class._field_with_storage_name('foo').should == nil
+      @class._field_with_storage_name(:foo).should == nil
+      @class._field_with_storage_name(:bar).should be(@field_foo)
+      @class._field_with_storage_name('bar').should be(@field_foo)
+    end
+
+    it "should raise if you try to define a field with the same name" do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+
+      @field_foo = expect_and_create_field!('foo', 'bar', true, false, { :type => :normal, :visibility => :public, :storage => :bar })
+      e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+        @class.field 'foo', :storage => :bar
+      end
+      e.session_class.should be(@class)
+      e.field_name.should == :foo
+      e.message.should match(/foo/i)
+    end
+
+    it "should raise if you try to define a field with the same storage name" do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+
+      @field_foo = expect_and_create_field!('bar', 'foo', true, false, { :type => :normal, :visibility => :public, :storage => :foo })
+      e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+        @class.field 'bar', :storage => :foo
+      end
+      e.session_class.should be(@class)
+      e.original_field_name.should == :foo
+      e.new_field_name.should == :bar
+      e.storage_name.should == 'foo'
+      e.message.should match(/foo/i)
+      e.message.should match(/bar/i)
     end
   end
 end
