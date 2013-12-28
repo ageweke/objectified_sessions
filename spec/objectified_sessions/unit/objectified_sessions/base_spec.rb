@@ -267,5 +267,87 @@ describe ObjectifiedSessions::Base do
       e.message.should match(/foo/i)
       e.message.should match(/bar/i)
     end
+
+    describe "inactive fields" do
+      it "should allow defining an inactive field" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, false, { :type => :inactive, :visibility => :public })
+        @class.inactive :foo
+
+        @class._field_named(:foo).should be(@field_foo)
+        @class._field_named('foo').should be(@field_foo)
+        @class._field_with_storage_name(:foo).should be(@field_foo)
+        @class._field_with_storage_name('foo').should be(@field_foo)
+      end
+
+      it "should conflict with a normal field" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, false, { :type => :inactive, :visibility => :public })
+        @class.inactive :foo
+
+        @field_foo = expect_and_create_field!('foo', 'bar', true, false, { :type => :normal, :visibility => :public, :storage => :bar })
+        e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+          @class.field 'foo', :storage => :bar
+        end
+        e.session_class.should be(@class)
+        e.field_name.should == :foo
+        e.message.should match(/foo/i)
+      end
+
+      it "should raise if you try to define a field with the same storage name" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, false, { :type => :inactive, :visibility => :public })
+        @class.inactive :foo
+
+        @field_foo = expect_and_create_field!('bar', 'foo', true, false, { :type => :normal, :visibility => :public, :storage => :foo })
+        e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+          @class.field 'bar', :storage => :foo
+        end
+        e.session_class.should be(@class)
+        e.original_field_name.should == :foo
+        e.new_field_name.should == :bar
+        e.storage_name.should == 'foo'
+        e.message.should match(/foo/i)
+        e.message.should match(/bar/i)
+      end
+    end
+
+    describe "retired fields" do
+      it "should allow defining a retired field" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, true, { :type => :retired, :visibility => :public })
+        @class.retired :foo
+
+        @class._field_named(:foo).should be(@field_foo)
+        @class._field_named('foo').should be(@field_foo)
+        @class._field_with_storage_name(:foo).should be(@field_foo)
+        @class._field_with_storage_name('foo').should be(@field_foo)
+      end
+
+      it "should conflict with a normal field" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, true, { :type => :retired, :visibility => :public })
+        @class.retired :foo
+
+        @field_foo = expect_and_create_field!('foo', 'bar', true, false, { :type => :normal, :visibility => :public, :storage => :bar })
+        e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
+          @class.field 'foo', :storage => :bar
+        end
+        e.session_class.should be(@class)
+        e.field_name.should == :foo
+        e.message.should match(/foo/i)
+      end
+
+      it "should raise if you try to define a field with the same storage name" do
+        @field_foo = expect_and_create_field!(:foo, 'foo', false, true, { :type => :retired, :visibility => :public })
+        @class.retired :foo
+
+        @field_foo = expect_and_create_field!('bar', 'foo', true, false, { :type => :normal, :visibility => :public, :storage => :foo })
+        e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError) do
+          @class.field 'bar', :storage => :foo
+        end
+        e.session_class.should be(@class)
+        e.original_field_name.should == :foo
+        e.new_field_name.should == :bar
+        e.storage_name.should == 'foo'
+        e.message.should match(/foo/i)
+        e.message.should match(/bar/i)
+      end
+    end
   end
 end
