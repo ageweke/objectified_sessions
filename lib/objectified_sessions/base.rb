@@ -128,14 +128,40 @@ module ObjectifiedSessions
         @fields_by_storage_name[new_field.storage_name] = new_field
       end
 
+      # Defines a retired field. A retired field is really nothing more than a marker indicating that you _used_ to
+      # have a field with a given name (and, potentially, storage alias); you can't access its data, and, if
+      # you've set <tt>unknown_fields :delete</tt>, any data _will_ be deleted.
+      #
+      # So, what's the point? You will still get an error if you try to define another field with the same name, or
+      # storage alias. If you re-use a field, then, especially if you're using Rails' default CookieStore, you
+      # can run into awful problems where data from some previous usage is interpreted as being valid data for the new
+      # usage. Instead of simply removing fields when you're done with them, make them retired (and move them to the
+      # bottom of the class, if you want, for better readability); this will have the same effect as removing them,
+      # but will keep you from accidentally reusing them in the future.
+      #
+      # +name+ is the name of the field; the only valid option for +options+ is +:storage+. (+:visibility+ is accepted
+      # but ignored, since no methods are generated for retired fields.)
       def retired(name, options = { })
         field(name, options.merge(:type => :retired))
       end
 
+      # Defines an inactive field. An inactive field is identical to a retired field, except that, if you've set
+      # <tt>unknown_fields :delete</tt>, data from an inactive field will _not_ be deleted. You can use it as a way of
+      # retiring a field that you no longer want to use from code, but whose data you still want preserved. (If you
+      # have not set <tt>unknown_fields :delete</tt>, then it behaves identically to a retired field.)
+      #
+      # +name+ is the name of the field; the only valid option for +options+ is +:storage+. (+:visibility+ is accepted
+      # but ignored, since no methods are generated for inactive fields.)
       def inactive(name, options = { })
         field(name, options.merge(:type => :inactive))
       end
 
+      # Sets the default visibility of new fields on this class. This is ordinarily +:public+, meaning fields will
+      # generate accessor methods (_e.g._, +#foo+ and +#foo=+) that are public unless you explicitly say
+      # <tt>:visibility => :private</tt> in the field definition. However, you can change it to +:private+, meaning
+      # fields will be private unless you explicitly specify <tt>:visibility => :public</tt>.
+      #
+      # If called without an argument, returns the current default visibility for fields on this class.
       def default_visibility(new_visibility = nil)
         if new_visibility
           if [ :public, :private ].include?(new_visibility)
@@ -148,16 +174,33 @@ module ObjectifiedSessions
         end
       end
 
-      def prefix(new_prefix = nil)
-        if new_prefix.kind_of?(String) || new_prefix.kind_of?(Symbol)
-          @prefix = if new_prefix then new_prefix.to_s.strip else nil end
-        elsif new_prefix
-          raise ArgumentError, "Invalid prefix; must be a String or Symbol: #{new_prefix.inspect}"
-        else
+      # Sets the prefix. If a prefix is set, then all field data is taken from (and stored into) a Hash bound to this
+      # prefix within the session, rather than directly in the session; this segregates all your ObjectifiedSession
+      # data from other usage of the session. This is not generally necessary, but can be useful in certain situations.
+      # Note that setting a prefix affects _all_ fields, not just those defined after it's set; the prefix is global
+      # to your objectified session, and you can only have a single prefix at once.
+      #
+      # Perhaps obvious, but changing the prefix will effectively cause all your objectified-session data to disappear,
+      # as it'll be stored under a different key. Choose once, at the beginning.
+      #
+      # If called with no arguments, returns the current prefix.
+      def prefix(new_prefix = :__none_specified)
+        if new_prefix == :__none_specified
           @prefix
+        elsif new_prefix.kind_of?(String) || new_prefix.kind_of?(Symbol) || new_prefix == nil
+          @prefix = if new_prefix then new_prefix.to_s.strip else nil end
+        else
+          raise ArgumentError, "Invalid prefix; must be a String or Symbol: #{new_prefix.inspect}"
         end
       end
 
+      # Sets what to do with unknown fields. With +:preserve+, the default setting, any data residing under keys that
+      # aren't defined as a field will simply be preserved, even as it's inaccessible. With +:delete+, any data
+      # residing under keys that aren't defined as a field will be *deleted* when your objectified session class is
+      # instantiated. Obviously, be careful if you set this to +:delete+; if you're using traditional session access
+      # anywhere else in code, and you don't duplicate its use as a field in your objectified session, really bad things
+      # will happen as the objectified session removes keys being used by other parts of the code. But it's a very nice
+      # way to keep your session tidy, too.
       def unknown_fields(what_to_do = nil)
         if what_to_do == nil
           @unknown_fields ||= :preserve
@@ -168,6 +211,9 @@ module ObjectifiedSessions
         end
       end
 
+      # What are the names of all fields that are accessible -- that is, whose data can be accessed? This returns an
+      # array of field names, not storage names; retired fields and inactive fields don't allow access to their data,
+      # so they won't be included.
       def accessible_field_names
         if @fields
           @fields.values.select { |f| f.allow_access_to_data? }.map(&:name)
@@ -176,22 +222,33 @@ module ObjectifiedSessions
         end
       end
 
+      # Returns the FieldDefinition object with the given name, if any.
       def _field_named(name)
         name = ObjectifiedSessions::FieldDefinition.normalize_name(name)
         @fields[name]
       end
 
+      # Returns the FieldDefinition object that stores its data under the given key, if any.
       def _field_with_storage_name(storage_name)
         storage_name = ObjectifiedSessions::FieldDefinition.normalize_name(storage_name).to_s
         @fields_by_storage_name[storage_name]
       end
 
+      # If this class doesn't have an active field (not retired or inactive) with the given name, raises
+      # ObjectifiedSessions::Errors::NoSuchFieldError. This is used as a guard to make sure we don't try to retrieve
+      # data that hasn't been defined as a field.
       def _ensure_has_field_named(name)
         out = _field_named(name)
         out = nil if out && (! out.allow_access_to_data?)
         out || (raise ObjectifiedSessions::Errors::NoSuchFieldError.new(self, name))
       end
 
+      # Returns the dynamic-methods module. The dynamic-methods module is a new Module that is automatically included
+      # into the objectified-sessions class and given a reasonable name; it also has #define_method and #private made
+      # into public methods, so that it's easy to define methods on it.
+      #
+      # The dynamic-methods module is where we define all the accessor methods that #field generates. We do this instead
+      # of defining them directly on this class so that you can override them, and #super will still work properly.
       def _dynamic_methods_module
         @_dynamic_methods_module ||= begin
           out = Module.new do

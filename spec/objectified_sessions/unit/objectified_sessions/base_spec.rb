@@ -221,10 +221,13 @@ describe ObjectifiedSessions::Base do
       @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :private })
       @class.field :foo
 
-      @class._field_named(:foo).should be(@field_foo)
-      @class._field_named('foo').should be(@field_foo)
-      @class._field_with_storage_name(:foo).should be(@field_foo)
-      @class._field_with_storage_name('foo').should be(@field_foo)
+      @field_bar = expect_and_create_field!(:bar, 'bar', true, false, { :type => :normal, :visibility => :public })
+      @class.field :bar, :visibility => :public
+
+      @class.default_visibility :public
+
+      @field_baz = expect_and_create_field!(:baz, 'baz', true, false, { :type => :normal, :visibility => :public })
+      @class.field :baz
     end
 
     it "should allow you to change the storage name" do
@@ -349,5 +352,122 @@ describe ObjectifiedSessions::Base do
         e.message.should match(/bar/i)
       end
     end
+  end
+
+  it "should set and return the default visibility properly" do
+    @class.default_visibility.should == :public
+    @class.default_visibility :private
+    @class.default_visibility.should == :private
+    lambda { @class.default_visibility :foobar }.should raise_error(ArgumentError)
+    lambda { @class.default_visibility 12345 }.should raise_error(ArgumentError)
+    @class.default_visibility.should == :private
+    @class.default_visibility :public
+    @class.default_visibility.should == :public
+  end
+
+  it "should set and return the prefix properly" do
+    @class.prefix.should == nil
+    @class.prefix :prf
+    @class.prefix.should == 'prf'
+    @class.prefix 'BaZ'
+    @class.prefix.should == 'BaZ'
+    lambda { @class.prefix 12345 }.should raise_error(ArgumentError)
+    lambda { @class.prefix 4.3 }.should raise_error(ArgumentError)
+    @class.prefix.should == 'BaZ'
+    @class.prefix nil
+    @class.prefix.should == nil
+  end
+
+  it "should set and return #unknown_fields properly" do
+    @class.unknown_fields.should == :preserve
+    @class.unknown_fields :delete
+    @class.unknown_fields.should == :delete
+    lambda { @class.unknown_fields :foo }.should raise_error(ArgumentError)
+    lambda { @class.unknown_fields 12345 }.should raise_error(ArgumentError)
+    @class.unknown_fields.should == :delete
+    @class.unknown_fields :preserve
+    @class.unknown_fields.should == :preserve
+  end
+
+  it "should return only fields in #accessible_field_names, return fields by name or storage name appropriately, and raise NoSuchFieldError when appropriate" do
+    @field_foo = expect_and_create_field!(:foo, 'stg1', true, false, { :type => :normal, :visibility => :public, :storage => :stg1 })
+    @class.field :foo, :storage => :stg1
+
+    @field_bar = expect_and_create_field!(:bar, 'stg2', false, false, { :type => :inactive, :visibility => :public, :storage => :stg2 })
+    @class.inactive :bar, :storage => :stg2
+
+    @field_baz = expect_and_create_field!(:baz, 'stg3', false, true, { :type => :retired, :visibility => :public, :storage => :stg3 })
+    @class.retired :baz, :storage => :stg3
+
+    @field_quux = expect_and_create_field!(:quux, 'stg4', true, false, { :type => :normal, :visibility => :public, :storage => :stg4 })
+    @class.field :quux, :storage => :stg4
+
+    @class.accessible_field_names.sort_by(&:to_s).should == [ :foo, :quux ].sort_by(&:to_s)
+
+    @class._field_named(:foo).should be(@field_foo)
+    @class._field_named(:bar).should be(@field_bar)
+    @class._field_named(:baz).should be(@field_baz)
+    @class._field_named(:quux).should be(@field_quux)
+    @class._field_named('foo').should be(@field_foo)
+    @class._field_named('bar').should be(@field_bar)
+    @class._field_named('baz').should be(@field_baz)
+    @class._field_named('quux').should be(@field_quux)
+
+    @class._field_with_storage_name(:foo).should == nil
+    @class._field_with_storage_name(:bar).should == nil
+    @class._field_with_storage_name(:baz).should == nil
+    @class._field_with_storage_name(:quux).should == nil
+    @class._field_with_storage_name('foo').should == nil
+    @class._field_with_storage_name('bar').should == nil
+    @class._field_with_storage_name('baz').should == nil
+    @class._field_with_storage_name('quux').should == nil
+
+    @class._field_with_storage_name(:stg1).should be(@field_foo)
+    @class._field_with_storage_name(:stg2).should be(@field_bar)
+    @class._field_with_storage_name(:stg3).should be(@field_baz)
+    @class._field_with_storage_name(:stg4).should be(@field_quux)
+    @class._field_with_storage_name('stg1').should be(@field_foo)
+    @class._field_with_storage_name('stg2').should be(@field_bar)
+    @class._field_with_storage_name('stg3').should be(@field_baz)
+    @class._field_with_storage_name('stg4').should be(@field_quux)
+
+    @class._ensure_has_field_named(:foo)
+    @class._ensure_has_field_named(:quux)
+    @class._ensure_has_field_named('foo')
+    @class._ensure_has_field_named('quux')
+
+    lambda { @class._ensure_has_field_named(:bar) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named(:baz) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('bar') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('baz') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+
+    lambda { @class._ensure_has_field_named(:stg1) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named(:stg2) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named(:stg3) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named(:stg4) }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('stg1') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('stg2') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('stg3') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+    lambda { @class._ensure_has_field_named('stg4') }.should raise_error(ObjectifiedSessions::Errors::NoSuchFieldError)
+  end
+
+  it "should return a dynamic-methods module that's configured correctly" do
+    ::Object.const_set(:ObjectifiedSessionsSpecClassDmm, @class)
+
+    mod = @class._dynamic_methods_module
+    @class.included_modules.include?(mod).should be
+    mod.name.should == "ObjectifiedSessionsSpecClassDmm::ObjectifiedSessionsDynamicMethods"
+
+    mod.define_method("foo") { "foo!" }
+    instance = @class.new(@underlying_session)
+    instance.foo.should == "foo!"
+
+    mod.define_method("bar") { "bar!" }
+    mod.private :bar
+    instance = @class.new(@underlying_session)
+    instance.respond_to?(:bar).should_not be
+    instance.send(:bar).should == "bar!"
+
+    @class._dynamic_methods_module.should be(mod)
   end
 end
