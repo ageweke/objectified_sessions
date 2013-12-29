@@ -110,6 +110,10 @@ describe ObjectifiedSessions::Base do
     end
   end
 
+  describe "retrieving field names" do
+
+  end
+
   describe "reading fields" do
     before :each do
       @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
@@ -403,6 +407,13 @@ describe ObjectifiedSessions::Base do
     @class.field :quux, :storage => :stg4
 
     @class.accessible_field_names.sort_by(&:to_s).should == [ :foo, :quux ].sort_by(&:to_s)
+
+    instance = @class.new(@underlying_session)
+    instance.field_names.sort_by(&:to_s).should == [ :foo, :quux ].sort_by(&:to_s)
+
+    expect(@underlying_session).to receive(:[]).once.with('stg1').and_return(nil)
+    expect(@underlying_session).to receive(:[]).once.with('stg4').and_return(123)
+    instance.keys.should == [ :quux ]
 
     @class._field_named(:foo).should be(@field_foo)
     @class._field_named(:bar).should be(@field_bar)

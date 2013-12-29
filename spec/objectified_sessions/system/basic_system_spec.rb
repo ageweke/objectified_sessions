@@ -55,6 +55,45 @@ describe "ObjectifiedSessions basic operations" do
     @controller_instance.objsession.get_foo.should == 234
   end
 
+  it "should tell you what fields are defined, and which have data" do
+    define_objsession_class do
+      field :foo
+      field :bar
+    end
+
+    @controller_instance.objsession.field_names.sort_by(&:to_s).should == [ :foo, :bar ].sort_by(&:to_s)
+
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(123)
+    expect(@underlying_session).to receive(:[]).once.with('bar').and_return(nil)
+    @controller_instance.objsession.keys.should == [ :foo ]
+
+    expect(@underlying_session).to receive(:[]).once.with('foo').and_return(nil)
+    expect(@underlying_session).to receive(:[]).once.with('bar').and_return(false)
+    @controller_instance.objsession.keys.should == [ :bar ]
+  end
+
+  it "should turn itself into a string reasonably well" do
+    define_objsession_class do
+      field :foo
+      field :bar
+    end
+
+    ::Object.const_set(:ObjectifiedSessionsSpecBasicString, @objsession_class)
+
+    allow(@underlying_session).to receive(:[]).with('foo').and_return(123)
+    allow(@underlying_session).to receive(:[]).with('bar').and_return(nil)
+    @controller_instance.objsession.to_s.should == "<ObjectifiedSessionsSpecBasicString: foo: 123>"
+    @controller_instance.objsession.inspect.should == @controller_instance.objsession.to_s
+
+    allow(@underlying_session).to receive(:[]).with('foo').and_return(123)
+    allow(@underlying_session).to receive(:[]).with('bar').and_return("a" * 200)
+    @controller_instance.objsession.to_s.should == "<ObjectifiedSessionsSpecBasicString: bar: \"#{"a" * 36}..., foo: 123>"
+    @controller_instance.objsession.inspect.should == @controller_instance.objsession.to_s
+
+    @controller_instance.objsession.to_s(false).should == "<ObjectifiedSessionsSpecBasicString: bar: \"#{"a" * 200}\", foo: 123>"
+    @controller_instance.objsession.inspect(false).should == @controller_instance.objsession.to_s(false)
+  end
+
   it "should allow setting a storage name for a field, and should use that when talking to the underlying session" do
     define_objsession_class do
       unknown_fields :delete

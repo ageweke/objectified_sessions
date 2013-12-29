@@ -23,6 +23,36 @@ module ObjectifiedSessions
       _delete_unknown_fields_if_needed!
     end
 
+    # A convenient alias for accessible_field_names, so you don't have to go through the class.
+    def field_names
+      self.class.accessible_field_names
+    end
+
+    # Returns the (possibly empty) set of all field names that actually have data present.
+    def keys
+      field_names.select { |f| self[f] != nil }
+    end
+
+    # Returns a nice, pretty string of the current set of values for this session. We abbreviate long values by default,
+    # so that we don't return some absurdly-long string.
+    def to_s(abbreviate = true)
+      out = "<#{self.class.name}: "
+
+      out << keys.sort_by(&:to_s).map do |k|
+        s = self[k].inspect
+        s = s[0..36] + "..." if abbreviate && s.length > 40
+        "#{k}: #{s}"
+      end.join(", ")
+
+      out << ">"
+      out
+    end
+
+    # Make #inspect do the same as #to_s, so we also get this in debugging output.
+    def inspect(abbreviate = true)
+      to_s(abbreviate)
+    end
+
     private
     # This method returns the 'true' underlying session we should use. Typically this is nothing more than
     # +@_base_underlying_session+ -- the argument passed in to our constructor -- but, if a prefix is set, this is

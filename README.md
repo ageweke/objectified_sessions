@@ -349,6 +349,17 @@ file before resolving the class (but won't fail if that doesn't work &mdash; onl
 class afterwards). This means that the class you use does need to either already be loaded, or the file it's in needs
 to be named correctly and on one of Rails' `load_paths`.
 
+#### Debugging and Other Tools
+
+You can call #fields on the objectified-session object to get back an Array of Symbols, listing the fields that _can_
+be set on the session. You can call #fields on the objectified-session object to get back an Array of Symbols, listing
+the fields that _have_ something set (besides _nil_ &mdash; note, in this case, that `false` is distinct from `nil`)
+at present.
+
+Calling `#to_s` or `#inspect` (which produce the same result) on the objectified session will produce a nice string
+containing, in alphabetical order, all data that's set on the session. Long data is abbreviated at forty characters;
+passing an argument of `false` to either of these methods will remove such abbreivation.
+
 #### Migrating To ObjectifiedSessions
 
 If you have an existing application and want to migrate to ObjectifiedSessions bit by bit, here's how I'd do it:
