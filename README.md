@@ -389,3 +389,14 @@ for Gems, plugins, or other code that may be using the session without your know
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
+
+### Running Specs
+
+ObjectifiedSessions is very thoroughly tested, including both system specs (that test the entire system at once) and
+unit specs (that test each class individually).
+
+To run these specs:
+
+1. `cd objectified_sessions` (the root of the gem).
+2. `bundle install`
+3. `bundle exec rspec spec` will run all specs. (Or just `rake`.)
