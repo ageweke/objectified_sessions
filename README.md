@@ -36,6 +36,14 @@ And, best of all, you can migrate to ObjectifiedSessions completely incrementall
 traditional session-handling code. You can migrate call site by call site, at your own pace; there's no need to
 migrate all at once, or even migrate all code for a given session key all at once.
 
+ObjectifiedSessions supports:
+
+* Ruby 1.8.7, 1.9.3, 2.0.0, 2.1.0, or JRuby 1.7.9
+* Rails 3.0.20, 3.1.12, 3.2.16, and 4.0.2.
+
+These are, however, just the versions it's tested against; ObjectifiedSessions contains no code that should be at all
+particularly dependent on exact Ruby or Rails versions, and should be compatible with a broad set of versions.
+
 Current build status: ![Current Build Status](https://api.travis-ci.org/ageweke/objectified_sessions.png?branch=master)
 
 ## Installation
@@ -210,7 +218,7 @@ If you add this to your session class:
 
     allowed_value_types :primitive
 
-...then you will receive an ArgumentError if you try to store anything in the session other than `nil`, `true`,
+...then you will receive an `ArgumentError` if you try to store anything in the session other than `nil`, `true`,
 `false`, a `String`, a `Symbol`, a `Numeric` (including both integers and floating-point numbers), or a `Time`.
 
 If you instead set this as follows:
