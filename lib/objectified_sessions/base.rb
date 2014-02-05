@@ -116,8 +116,49 @@ module ObjectifiedSessions
     # ObjectifiedSessions::Errors::NoSuchFieldError.
     def []=(field_name, new_value)
       field = self.class._ensure_has_field_named(field_name)
+      validate_new_value_type!(new_value)
       _objectified_sessions_underlying_session(true)[field.storage_name] = new_value
       new_value
+    end
+
+    # Validates that a new value being assigned to a field is acceptable, according to whatever #allowed_value_types
+    # setting you've set on this class. Does nothing if the data is valid; raises ArgumentError if it's invalid.
+    def validate_new_value_type!(new_value)
+      send("validate_new_value_type_for_#{self.class.allowed_value_types}!", new_value)
+    end
+
+    # Validates that a new value being assigned to a field is acceptable, according to the :anything
+    # #allowed_value_types setting. This allows storing anything, so this method is a no-op.
+    def validate_new_value_type_for_anything!(new_value)
+      # ok
+    end
+
+    # Validates that a new value being assigned to a field is acceptable, according to the :primitive
+    # #allowed_value_types setting. This raises an exception if passed anything but a simple scalar.
+    def validate_new_value_type_for_primitive!(new_value)
+      case new_value
+      when String, Symbol, Numeric, Time, true, false, nil then true
+      else
+        raise ArgumentError, "You've asked your ObjectifiedSession to only allow values of scalar types, but you're trying to store this: #{new_value.inspect}"
+      end
+    end
+
+    # Validates that a new value being assigned to a field is acceptable, according to the :primitive_and_compound
+    # #allowed_value_types setting. This does recursive examination of Arrays and Hashes. Raises an ArgumentError
+    # if there's an invalid value present.
+    def validate_new_value_type_for_primitive_and_compound!(new_value)
+      case new_value
+      when String, Symbol, Numeric, Time, true, false, nil then true
+      when Array then
+        new_value.each { |x| validate_new_value_type_for_primitive_and_compound!(x) }
+      when Hash then
+        new_value.each do |k,v|
+          validate_new_value_type_for_primitive_and_compound!(k)
+          validate_new_value_type_for_primitive_and_compound!(v)
+        end
+      else
+        raise ArgumentError, "You've asked your ObjectifiedSession to only allow values of scalar types, plus Arrays and Hashes, but you're trying to store this (possibly nested): #{new_value.inspect}"
+      end
     end
 
     DYNAMIC_METHODS_MODULE_NAME = :ObjectifiedSessionsDynamicMethods
@@ -202,6 +243,27 @@ module ObjectifiedSessions
         else
           @default_visibility ||= :public
         end
+      end
+
+      ALLOWED_ALLOWED_VALUE_TYPES = %w{anything primitive_and_compound primitive}.map { |x| x.to_sym }
+
+      # Sets the allowed value types on this class, or returns the current setting if no argument is supplied.
+      # The valid settings are:
+      #
+      # [:anything] All values are allowed, including arbitrary Ruby objects.
+      # [:primitive] Only primitive, simple scalars are allowed: nil, true, false, Strings, Symbols, Numerics (including
+      #              both integer and floating-point numbers), and Times. Arrays and Hashes are not allowed.
+      # [:primitive_and_compound] All primitive scalars, plus Arrays and Hashes composed entirely of primitive
+      #                           scalars, plus other Arrays and Hashes, are allowed.
+      def allowed_value_types(allowed = nil)
+        if allowed
+          allowed = allowed.to_s.strip.downcase.to_sym
+          raise ArgumentError, "Invalid value for allowed_value_types: #{allowed.inspect}; we allow: #{ALLOWED_ALLOWED_VALUE_TYPES.inspect}" unless ALLOWED_ALLOWED_VALUE_TYPES.include?(allowed)
+
+          @allowed_value_types = allowed
+        end
+
+        @allowed_value_types ||= :anything
       end
 
       # Sets the prefix. If a prefix is set, then all field data is taken from (and stored into) a Hash bound to this

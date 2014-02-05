@@ -199,6 +199,30 @@ to disappear_. (Hopefully this is obvious; this is because ObjectifiedSessions w
 key for that data.) It is, however, safe to do the reverse, by renaming a field and setting its storage alias to
 be its old name.
 
+#### Value Types
+
+By default, ObjectifiedSessions will let you store any arbitrary Ruby object in the session &mdash; just like the
+default Rails session support will. However, this can cause significant issues, particularly with sessions; if you
+put, for example, a User model into the session, and then pull it out later (perhaps months later!), any attributes
+you added in the mean time will simply not be present. This is dangerous.
+
+If you add this to your session class:
+
+    allowed_value_types :primitive
+
+...then you will receive an ArgumentError if you try to store anything in the session other than `nil`, `true`,
+`false`, a `String`, a `Symbol`, a `Numeric` (including both integers and floating-point numbers), or a `Time`.
+
+If you instead set this as follows:
+
+    allowed_value_types :primitive_and_compound
+
+...then the rules are relaxed to also include `Array`s and `Hash`es, as long as their constituent elements are valid
+simple scalars or themselves `Array`s or `Hash`es. (In other words, you can nest these data types as deeply as you
+would like.)
+
+If, for some reason, you need it, `allowed_value_types :anything` is the default setting.
+
 #### Retiring Fields
 
 Let's say you (probably wisely) stop supporting custom background colors, and remove that field. So far, so good.

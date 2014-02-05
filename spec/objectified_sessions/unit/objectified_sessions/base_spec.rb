@@ -111,7 +111,27 @@ describe ObjectifiedSessions::Base do
   end
 
   describe "retrieving field names" do
+    before :each do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+      @field_bar = expect_and_create_field!(:bar, 'bar', true, false, { :type => :normal, :visibility => :public })
+      @class.field :bar
+      @field_baz = expect_and_create_field!(:baz, 'baz', true, false, { :type => :normal, :visibility => :public })
+      @class.field :baz
+      @field_ret = expect_and_create_field!(:ret, 'ret', false, true, { :type => :retired, :visibility => :public })
+      @class.retired :ret
+      @field_ina = expect_and_create_field!(:ina, 'ina', false, false, { :type => :inactive, :visibility => :public })
+      @class.inactive :ina
+    end
 
+    it "should return all normal fields, but not active or retired, from the class" do
+      @class.accessible_field_names.sort_by { |x| x.to_s }.should == %w{foo bar baz}.map { |x| x.to_sym }.sort_by { |x| x.to_s }
+    end
+
+    it "should return all normal fields, but not active or retired, from the instance" do
+      instance = new_instance!
+      instance.field_names.sort_by { |x| x.to_s }.should == %w{foo bar baz}.map { |x| x.to_sym }.sort_by { |x| x.to_s }
+    end
   end
 
   describe "reading fields" do
@@ -391,6 +411,64 @@ describe ObjectifiedSessions::Base do
     @class.unknown_fields.should == :delete
     @class.unknown_fields :preserve
     @class.unknown_fields.should == :preserve
+  end
+
+  it "should allow setting allowed_value_types to any valid value, but not invalid values, and return it" do
+    @class.allowed_value_types.should == :anything
+    @class.allowed_value_types :primitive
+    @class.allowed_value_types.should == :primitive
+    @class.allowed_value_types :primitive_and_compound
+    @class.allowed_value_types.should == :primitive_and_compound
+    @class.allowed_value_types :anything
+    @class.allowed_value_types.should == :anything
+  end
+
+  describe "new-value type validation" do
+    before :each do
+      @field_foo = expect_and_create_field!(:foo, 'foo', true, false, { :type => :normal, :visibility => :public })
+      @class.field :foo
+
+      @instance = new_instance!
+
+      @scalars = [ "string", :symbol, true, false, nil, Time.now ]
+      @compound = [ [ 1, 2, 3 ], { 'foo' => 123 }, [ 1, [ 2, 3 ], 4 ], { 'foo' => [ 1, 2, 3 ] } ]
+
+      my_class = Class.new
+      @arbitrary = [ /something/, my_class.new, [ 1, 2, /foo/ ], { 'foo' => /foo/ } ]
+    end
+
+    it "should allow anything by default" do
+      (@scalars + @compound + @arbitrary).each do |value|
+        expect(@underlying_session).to receive(:[]=).once.with('foo', value)
+        @instance.send(:[]=, :foo, value)
+      end
+    end
+
+    it "should allow only simple scalars for :primitive" do
+      @class.allowed_value_types :primitive
+
+      (@scalars).each do |value|
+        expect(@underlying_session).to receive(:[]=).once.with('foo', value)
+        @instance.send(:[]=, :foo, value)
+      end
+
+      (@compound + @arbitrary).each do |value|
+        lambda { @instance.send(:[]=, :foo, value) }.should raise_error(ArgumentError)
+      end
+    end
+
+    it "should allow simple scalars and compounds of those for :primitive_and_compound" do
+      @class.allowed_value_types :primitive_and_compound
+
+      (@scalars + @compound).each do |value|
+        expect(@underlying_session).to receive(:[]=).once.with('foo', value)
+        @instance.send(:[]=, :foo, value)
+      end
+
+      (@arbitrary).each do |value|
+        lambda { @instance.send(:[]=, :foo, value) }.should raise_error(ArgumentError)
+      end
+    end
   end
 
   it "should return only fields in #accessible_field_names, return fields by name or storage name appropriately, and raise NoSuchFieldError when appropriate" do
