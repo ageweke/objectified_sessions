@@ -171,11 +171,11 @@ describe "ObjectifiedSessions error handling" do
     e.message.should match(/baz/i)
   end
 
-  it "should not let you define more than one field with the same name" do
+  it "should not let you define more than one field with the same name, but that differ" do
     e = capture_exception(ObjectifiedSessions::Errors::DuplicateFieldNameError) do
       define_objsession_class do
         field :foo
-        field 'foo'
+        field 'foo', :visibility => :private
       end
     end
 

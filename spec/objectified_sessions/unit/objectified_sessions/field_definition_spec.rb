@@ -5,16 +5,22 @@ describe ObjectifiedSessions::FieldDefinition do
     ObjectifiedSessions::FieldDefinition
   end
 
-  before :each do
-    @session_class = double("session_class")
-    allow(@session_class).to receive(:kind_of?).with(Class).and_return(true)
+  def new_session_class
+    out = double("session_class")
+    allow(out).to receive(:kind_of?).with(Class).and_return(true)
 
-    @dmm = Module.new do
+    dmm = Module.new do
       class << self
         public :define_method, :private
       end
     end
-    allow(@session_class).to receive(:_dynamic_methods_module).with().and_return(@dmm)
+    allow(out).to receive(:_dynamic_methods_module).with().and_return(dmm)
+    out
+  end
+
+  before :each do
+    @session_class = new_session_class
+    @dmm = @session_class._dynamic_methods_module
   end
 
   it "should normalize field names properly" do
@@ -56,6 +62,42 @@ describe ObjectifiedSessions::FieldDefinition do
     klass.new(@session_class, :foo, { :type => :normal, :visibility => :public }).allow_access_to_data?.should be
     klass.new(@session_class, :foo, { :type => :inactive, :visibility => :public }).allow_access_to_data?.should_not be
     klass.new(@session_class, :foo, { :type => :retired, :visibility => :public }).allow_access_to_data?.should_not be
+  end
+
+  [ "==", "eql?" ].each do |method_name|
+    describe method_name do
+      before :each do
+        @mn = method_name
+        @basis = klass.new(@session_class, :foo, { :type => :normal, :visibility => :public })
+      end
+
+      it "should match for fields that are identical" do
+        expect(@basis.send(@mn, klass.new(@session_class, :foo, { :type => :normal, :visibility => :public }))).to be_true
+        expect(@basis.send(@mn, klass.new(@session_class, :foo, { :type => :normal, :visibility => :public, :storage => :foo }))).to be_true
+      end
+
+      it "should not match if the session class is different" do
+        session_class_2 = new_session_class
+        expect(@basis.send(@mn, klass.new(session_class_2, :foo, { :type => :normal, :visibility => :public, :storage => :foo }))).not_to be_true
+      end
+
+      it "should not match if the name is different" do
+        expect(@basis.send(@mn, klass.new(@session_class, :bar, { :type => :normal, :visibility => :public }))).not_to be_true
+      end
+
+      it "should not match if the type is different" do
+        expect(@basis.send(@mn, klass.new(@session_class, :foo, { :type => :inactive, :visibility => :public }))).not_to be_true
+        expect(@basis.send(@mn, klass.new(@session_class, :foo, { :type => :retired, :visibility => :public }))).not_to be_true
+      end
+
+      it "should not match if the visibility is different" do
+        expect(@basis.send(@mn, klass.new(@session_class, :bar, { :type => :normal, :visibility => :private }))).not_to be_true
+      end
+
+      it "should not match if the storage is different" do
+        expect(@basis.send(@mn, klass.new(@session_class, :bar, { :type => :normal, :visibility => :public, :storage => :baz }))).not_to be_true
+      end
+    end
   end
 
   context "with dynamic-methods module testing" do

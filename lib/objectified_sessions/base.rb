@@ -186,13 +186,13 @@ module ObjectifiedSessions
         new_field = ObjectifiedSessions::FieldDefinition.new(self, name, options)
 
         # Check for a conflict with the field name.
-        if @fields[new_field.name]
+        if (other_field = @fields[new_field.name]) && (other_field != new_field)
           raise ObjectifiedSessions::Errors::DuplicateFieldNameError.new(self, new_field.name)
         end
 
         # Check for a conflict with the storage name.
-        if @fields_by_storage_name[new_field.storage_name]
-          raise ObjectifiedSessions::Errors::DuplicateFieldStorageNameError.new(self, @fields_by_storage_name[new_field.storage_name].name, new_field.name, new_field.storage_name)
+        if (other_field = @fields_by_storage_name[new_field.storage_name]) && (other_field != new_field)
+          raise ObjectifiedSessions::Errors::DuplicateFieldStorageNameError.new(self, other_field.name, new_field.name, new_field.storage_name)
         end
 
         @fields[new_field.name] = new_field

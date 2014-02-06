@@ -37,6 +37,19 @@ module ObjectifiedSessions
       create_methods!
     end
 
+    # Allow field comparison. We do this when you define a field that has the exact same name or storage name as another
+    # field -- we allow it if (and only if) they are identical in every other way.
+    def ==(other)
+      return false unless other.kind_of?(ObjectifiedSessions::FieldDefinition)
+      session_class == other.send(:session_class) && name == other.name && storage_name == other.storage_name &&
+        type == other.send(:type) && visibility == other.send(:visibility)
+    end
+
+    # Make sure eql? works the same as ==.
+    def eql?(other)
+      self == other
+    end
+
     # Returns the key under which this field should read and write its data. This will be its name, unless a
     # +:storage+ option was passed to the constructor, in which case it will be that value, instead.
     def storage_name
@@ -56,7 +69,7 @@ module ObjectifiedSessions
     end
 
     private
-    attr_reader :type, :visibility
+    attr_reader :type, :visibility, :session_class
 
     # Process the options passed in; this validates them, and sets +@type+, +@visibility+, and +@storage_name+
     # appropriately.
@@ -86,7 +99,7 @@ module ObjectifiedSessions
       return unless type == :normal
 
       fn = name
-      dmm = @session_class._dynamic_methods_module
+      dmm = session_class._dynamic_methods_module
       mn = name.to_s.downcase
 
       dmm.define_method(mn) do

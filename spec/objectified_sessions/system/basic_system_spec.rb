@@ -35,6 +35,18 @@ describe "ObjectifiedSessions basic operations" do
     @controller_instance.objsession.foo.should == 234
   end
 
+  it "should let you redefine a field if it's exactly identical" do
+    define_objsession_class { field :foo, :visibility => :private, :storage => :baz }
+
+    @objsession_class.class_eval { field :foo, :visibility => :private, :storage => :baz }
+
+    lambda { @objsession_class.class_eval { field :foo, :visibility => :public, :storage => :baz } }.should raise_error(ObjectifiedSessions::Errors::DuplicateFieldNameError)
+    lambda { @objsession_class.class_eval { field :foo, :visibility => :private, :storage => :aaa } }.should raise_error(ObjectifiedSessions::Errors::DuplicateFieldNameError)
+    lambda { @objsession_class.class_eval { field :quux, :visibility => :public, :storage => :baz } }.should raise_error(ObjectifiedSessions::Errors::DuplicateFieldStorageNameError)
+    lambda { @objsession_class.class_eval { inactive :foo, :visibility => :private, :storage => :baz } }.should raise_error(ObjectifiedSessions::Errors::DuplicateFieldNameError)
+    lambda { @objsession_class.class_eval { retired :foo, :visibility => :private, :storage => :baz } }.should raise_error(ObjectifiedSessions::Errors::DuplicateFieldNameError)
+  end
+
   it "should allow hash access to the underlying session" do
     define_objsession_class do
       field :foo, :visibility => :private
